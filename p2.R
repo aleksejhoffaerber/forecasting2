@@ -430,11 +430,4 @@ ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2)
 
 
 # AVERAGE OF THE FORECASTS FORECAST
-autoplot(forecast(fit.arima.adv, h = 39), series = "Forecast") +
-  autolayer(ts.test[,2], series = "Actual") +
-  ggtitle("Consumption Prediction based on Regression w/ ARIMA(1,0,0)(0,1,1) + Drift",
-          subtitle = "ARIMA based forecast fits the actual data quite well, Prediction Intervals increase due to included differences") +
-  xlab("Year") +
-  ylab("Consumption Exp. (in million AUD)") +
-  scale_x_continuous(limits = c(1990,2020)) +
-  theme_minimal()
+
