@@ -1,5 +1,5 @@
 # BAN430 - FORECASTING - 2nd Project
-
+# Libraries and theme----
 library(fpp2)
 library(ggplot2)
 library(PerformanceAnalytics)
@@ -11,9 +11,10 @@ library(dplyr)
 library(magrittr)
 library(readr)
 library(skimr)
-
 library(urca)
 library(tsDyn)
+
+theme_set(theme_minimal())
 
 # Loading data ----
 # Loading .csv file containing the important data pointse on "Net national disposable income" (di) and "Final consumption expenditure" (ce)
@@ -33,14 +34,23 @@ tse <- ts(df[,2:3], start = c(1959,3), end = c(2019,4), frequency = 4)
 
 # binding date information from tse object to original df (easier than transforming the original format to a R date format)
 df <- cbind(as.double(time(tse)), df) 
+
 df %<>% select(-Date) %>% 
   rename(Date = "as.double(time(tse))")
 
-# split into test and train set (10 years of prediction)
-ts.train <- window(tse, start = c(1959,3), end = c(2009,4), frequency = 4)
-ts.test <- window(tse, start = c(2010,1), frequency = 4)
+# Split into test and train set (10 years of prediction) ----
+ts.train <- ts(df[,2:3],
+               start = c(1959,3),
+               end = c(2009,4),
+               frequency = 4)
 
-# ANALYSIS IF TIME SERIES
+ts.test <- ts(df[,2:3], 
+              start = c(2010,1),
+              end = c(2019,4),
+              frequency = 4)
+
+
+# Time-series analysis and summaries ----
 skim(df)
 
 # Having a look at the time series, we see a high amount of cointegration between both series that needs
@@ -370,8 +380,14 @@ ggarrange(ce.acf.adv.5, ce.pacf.adv.5)
 
 checkresiduals(fit.arima.adv.5, theme = theme_minimal())
 
+<<<<<<< HEAD
 # On the other side, the automated approach yields in a slightly different model, that could not be estimated in our manual 
 # setting, due to non-stationarity issues. 
+=======
+ts[,2] %>% log() %>% nsdiffs()
+ts[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
+
+>>>>>>> 0cdf8af06a68e271e330a63d7b18c30eb1fdcdbb
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,1]))
 
@@ -383,4 +399,3 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
   theme_minimal()
 
 checkresiduals(fit.arima.adv, theme = theme_minimal())
-
