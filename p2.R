@@ -365,29 +365,34 @@ checkresiduals(fit.arima.adv.4, theme = theme_minimal())
 
 # When looking at the coefficients, we observe that SAR1, the seasonal component is not significant. Beside that,
 # also the xreg component is not significant, but we include it because of the task. We delete xsar1 from our model,
-# and rerun it to obtain our optimal and final model ARIMA(1,1,1)(0,1,1):
+# and rerun it to obtain our optimal and final model ARIMA(1,1,1)(0,1,1). Additionally, we could include a constant in order
+# to mimick the trend that is displayed in our regression residuals. For this, and because a drift cannot be included
+# if the order of difference > 2, we must set d = 0 and also q = 0, because this drift should explain the information
+# conveyed in the regression residuals. But because this change yields in more autocorrelation, we refrain from doing so:
 
-(fit.arima.adv.5 <- Arima(ts.train[,2], order = c(1,0,0), seasonal = c(0,1,1), include.constant = T, xreg = ts.train[,1]))
+(fit.arima.adv.5 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(0,1,1), xreg = ts.train[,1]))
 ce.acf.adv.5 <- ggAcf(fit.arima.adv.5$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  ggtitle("ACF for Regression w/ ARIMA(1,0,0)(0,1,1) and Drift") + 
   theme_minimal()
 ce.pacf.adv.5 <- ggPacf(fit.arima.adv.5$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  ggtitle("PACF for Regression w/ ARIMA(1,0,0)(0,1,1) and Drift") + 
   theme_minimal()
 ggarrange(ce.acf.adv.5, ce.pacf.adv.5)
 
+cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.5, type = "regression"),
+      "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.5, type = "innovation")) %>% 
+  autoplot(facets = T) +
+  ggtitle("Comparison of Forecast and ARIMA(1,0,0)(0,1,1) Errors",
+          subtitle = "Trend in Regression Errors left, ARIMA errors resemlbe a white noise series") +
+  theme_minimal()
+
 checkresiduals(fit.arima.adv.5, theme = theme_minimal())
 
-<<<<<<< HEAD
-# On the other side, the automated approach yields in a slightly different model, that could not be estimated in our manual 
-# setting, due to non-stationarity issues. 
-=======
-ts[,2] %>% log() %>% nsdiffs()
-ts[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
-
->>>>>>> 0cdf8af06a68e271e330a63d7b18c30eb1fdcdbb
+# On the other side, the automated approach yields in a different model variation, that was already discussed above
+# but discarded because of its negative impact on ACF and PACF plots, even though it yields in higher AICc. In the next exercise
+# both approaches will be compared in order to determine the winner in terms of test-set performance.
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,1]))
 
