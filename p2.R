@@ -1,5 +1,5 @@
 # BAN430 - FORECASTING - 2nd Project
-
+# Libraries ----
 library(fpp2)
 library(ggplot2)
 library(PerformanceAnalytics)
@@ -26,19 +26,29 @@ df %<>%
          di = B6NS1,
          ce = P3S1)
 
-# creating ts object
-ts <- ts(df[,2:3], start = c(1959,3), end = c(2019,4), frequency = 4)
+# Creating a ts object
+ts <- ts(df[,2:3],
+         start = c(1959,3),
+         end = c(2019,4),
+         frequency = 4)
 
-# binding date information from ts object to original df (easier than transforming the original format to a R date format)
+# Binding date information from ts object to original df (easier than transforming the original format to a R date format)
 df <- cbind(as.double(time(ts)), df) 
 df %<>% select(-Date) %>% 
   rename(Date = "as.double(time(ts))")
 
-# split into test and train set (10 years of prediction)
-ts.train <- ts(df[,2:3], start = c(1959,3), end = c(2009,4), frequency = 4)
-ts.test <- ts(df[,2:3], start = c(2010,1), end = c(2019,4), frequency = 4)
+# Split into test and train set (10 years of prediction) ----
+ts.train <- ts(df[,2:3],
+               start = c(1959,3),
+               end = c(2009,4),
+               frequency = 4)
 
-# ANALYSIS IF TIME SERIES
+ts.test <- ts(df[,2:3], 
+              start = c(2010,1),
+              end = c(2019,4),
+              frequency = 4)
+
+# Time-series analysis and summaries ----
 skim(df)
 
 di.plot <- autoplot(ts[,1], color = "red") + 
@@ -130,7 +140,3 @@ diff(diff(log(ts[,2]),4),1) %>% ur.kpss() %>% summary()
 
 ts[,2] %>% log() %>% nsdiffs()
 ts[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
-
-
-
-
