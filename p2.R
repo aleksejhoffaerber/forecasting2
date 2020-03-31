@@ -15,7 +15,7 @@ library(urca)
 library(tsDyn)
 
 theme_set(theme_minimal())
-# Loading data ----
+# 1. Loading data ----
 # Loading .csv file containing the important data pointse on "Net national disposable income" (di) and "Final consumption expenditure" (ce)
 # for all the countries available. Filtering out unnecessary columns, and changing data format to a wide format
 df <- read_csv("data.csv")
@@ -37,7 +37,7 @@ df <- cbind(as.double(time(tse)), df)
 df %<>% select(-Date) %>% 
   rename(Date = "as.double(time(tse))")
 
-# Split into test and train set (10 years of prediction) ----
+# 2. Split into test and train set (10 years of prediction) ----
 ts.train <- window (tse,
                start = c(1959,3),
                end = c(2009,4),
@@ -47,7 +47,7 @@ ts.test <- window (tse,
               start = c(2010,1),
               frequency = 4)
 
-# Time-series analysis and summaries ----
+# 3. Time-series analysis and summaries ----
 skim(df)
 
 # Having a look at the time series, we see a high amount of cointegration between both series that needs
@@ -57,6 +57,7 @@ skim(df)
 # is theoretically impacting the consumption of the population, even in the long run, because consumption directly depends
 # on what one earn. 
 
+# Analysis of the disposable income ----
 full.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
   autolayer(tse[,2], color = "darkblue", series = "dddd") +
   ggtitle("Net National Disposable Income and Final Consumption Expenditure", 
@@ -79,8 +80,6 @@ zoom.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
                      breaks = seq(0, 500000, by = 125000))
 
 ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
-
-# TIME SERIES PROPERTY ANALYSIS ----
 
 # Checking the residuals indicates that lotse of autocorrelation, in other words: valuable information remains in the residuals,
 # that is currently not used to predict the data. This autocorrelation pattern is also typical for this type of economic 
@@ -128,7 +127,7 @@ diff(diff(log(tse[,1]),4),1) %>% ur.kpss() %>% summary()
 tse[,1] %>% log() %>% nsdiffs()
 tse[,1] %>% log() %>% diff(lag = 4) %>% ndiffs()
 
-# ------
+# Consumption Expenditure Analysis ------
 
 # Exactly the same test and procedure will be applied to the Final Consumption Expenditure. Because both time series 
 # look very similar (see Figure XYZ), it can be inferred that a very similar transformation must be applied. This holds true, as 
@@ -148,7 +147,7 @@ diff(diff(log(tse[,2]),4),1) %>% ur.kpss() %>% summary()
 tse[,2] %>% log() %>% nsdiffs()
 tse[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
 
-# LONG-TERM RELATIONSHIP ----
+# 4. Long-term relationship analysis ----
 
 # As already indicated above, just regressing both variables on each other might lead to spurious regressions, identifiable
 # by a high Adj. R-sqaured and high residual autocorrelation (Hyndman & Athanasopoulos, 2018). This occurence impacts the 
@@ -165,7 +164,7 @@ summary(ur.df(residuals(fit.tse), type = "drift", lag = 1))
 # issues in the regression setting. But it indicates, that both variables have a significant, cointegrated long-term
 # relationship which can be used to design our forecasts.
 
-# IDENTIFY ARIMA MODEL FOR CONSUMPTION ----
+# 5. Identify ARIMA model for consumption ----
 
 # Firstly, based on the previously determined time series characteristics, we know that we must employ a first-order lag differences 
 # for our autoregression (AR) part and a first-order seasonal component for our quarterly data, meaining that d and D are
@@ -225,7 +224,7 @@ autoplot(fit.4) # Figure XYZ
 summary(fit.arima)
 checkresiduals(fit.arima)
 
-# COMPARING ACF/PACF OF MODEL AND RAW CONSUMPTION DATA
+# 6. Comparison on ACF and PACF for CE ----
 
 # Comparing the ACF and PACF plots of the raw Final Consumption Expenditure and ARIMA data, we can observe the following:
 # 1) The autocorrelation in the residuals is resolved. This was important to resolve, as ARIMA assumes that historical 
@@ -239,7 +238,7 @@ ggarrange(ce.acf, ce.pacf,
           ce.acf.4, ce.pacf.4, 
           ncol = 2, nrow = 2) # Figure XYZ
 
-# DATA FORECAST ----
+# 7. Data Forecast ----
 # More observations towards increasing PI, why it is increasing and connectio to pdq and PDQ
 autoplot(forecast(fit.3, h =39), series = "Forecast") +
   autolayer(test[,2], series = "Actual") +
@@ -249,7 +248,7 @@ autoplot(forecast(fit.3, h =39), series = "Forecast") +
   ylab("Consumption Exp. (in million AUD)") +
   scale_x_continuous(limits = c(1990,2020))
 
-# FORECAST WITH INCOME AS EXPLANATORY
+# 8. Forecast with income as explanatory, and new ARIMA model ----
 # need for Breusch-Godfrey test?
 (fit.arima.adv.1 <- Arima(ts.train[,2], order = c(0,1,0), seasonal = c(0,1,0), xreg = ts.train[,1]))
 ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + 
@@ -261,6 +260,8 @@ ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) +
 
 ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2)
 checkresiduals(fit.arima.adv.1)
+
+# Comparison of the ARIMA models ----
 
 # The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model 
 # (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's
