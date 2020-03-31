@@ -39,16 +39,14 @@ df %<>% select(-Date) %>%
   rename(Date = "as.double(time(tse))")
 
 # Split into test and train set (10 years of prediction) ----
-ts.train <- ts(df[,2:3],
+ts.train <- window (tse,
                start = c(1959,3),
                end = c(2009,4),
                frequency = 4)
 
-ts.test <- ts(df[,2:3], 
+ts.test <- window (tse, 
               start = c(2010,1),
-              end = c(2019,4),
               frequency = 4)
-
 
 # Time-series analysis and summaries ----
 skim(df)
@@ -65,23 +63,21 @@ full.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
   ggtitle("Net National Disposable Income and Final Consumption Expenditure", 
           subtitle = "Two time series show a high degree of cointegration") +
   scale_x_continuous(name = "Years",
-                     limitse = c(1960, 2020),
+                     limits = c(1960, 2020),
                      breaks = seq(1960, 2020, by = 10)) +
   scale_y_continuous(name = "Disposable Income (in AUD millions)",
-                     limitse = c(0, 500000),
-                     breaks = seq(0, 500000, by = 100000)) +
-  theme_minimal()
+                     limits = c(0, 500000),
+                     breaks = seq(0, 500000, by = 125000))
 
 zoom.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
   autolayer(tse[,2], color = "darkblue", series = "dddd") +
   ggtitle("Net National Disposable Income and Final Consumption Expenditure", 
           subtitle = "High degree of cointegration even clearer once we focus on the last 30 years") +
   scale_x_continuous(name = "Years",
-                     limitse = c(1990, 2020),
+                     limits = c(1990, 2020),
                      breaks = seq(1990, 2020, by = 10)) +
   scale_y_continuous(name = "Consumption Exp. (in AUD millions)",
-                     breaks = seq(0, 500000, by = 100000)) +
-  theme_minimal()
+                     breaks = seq(0, 500000, by = 125000))
 
 ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
 
@@ -113,7 +109,6 @@ tse[,1] %>% ur.kpss() %>% summary()
 # and seasonal (so yearly) difference in the series and can interpret the resultse as _quarterly changes_. 
 
 checkresiduals(log(tse[,1])) # Appendix 1
-
 checkresiduals(diff(diff(log(tse[,1]),4),1)) # Appendix 2
 
 # As can be seen in _Appendix 2_ and after applying log-transformation, seasonal, and first-order differencing, the ACF
@@ -183,7 +178,7 @@ summary(ur.df(residuals(fit.tse), type = "drift", lag = 1))
 ts.train[,2] %>% 
   diff(lag = 4) %>% 
   diff() %>% 
-  ggtsdisplay(., theme = theme_minimal()) # Figure XYZ
+  ggtsdisplay() # Figure XYZ
 
 # Based on the resulting assumptions, we conlude that an ARIMA(1,1,1)(0,1,0)[4] might be suitable. The last check is to 
 # validate whether we need to include a Q or P value at least. Looking at the ACF and PACF plots of our resulting model, 
@@ -191,28 +186,28 @@ ts.train[,2] %>%
 # component in the error term. We adjust our model therefore to reflect this change in the MA(q) model.
 
 fit.1 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(0,1,0))
-ce.acf.1 <- ggAcf(fit.1$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(0,1,0)") + theme_minimal()
-ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,0)") + theme_minimal()
+ce.acf.1 <- ggAcf(fit.1$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(0,1,0)")
+ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,0)")
 ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # Appendix XYZ
 
 fit.2 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,0))
-ce.acf.2 <- ggAcf(fit.2$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(1,1,0)") + theme_minimal()
-ce.pacf.2 <- ggPacf(fit.2$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(1,1,0)") + theme_minimal()
+ce.acf.2 <- ggAcf(fit.2$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(1,1,0)")
+ce.pacf.2 <- ggPacf(fit.2$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(1,1,0)")
 ggarrange(ce.acf.2, ce.pacf.2, ncol = 2) # Appendix XYZ
 
 fit.3 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(0,1,1))
-ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(0,1,1)") + theme_minimal() 
-ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,1)") + theme_minimal()
+ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(0,1,1)")
+ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,1)")
 ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Figure XYZ
 
 fit.4 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,1))
-ce.acf.4 <- ggAcf(fit.4$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(1,1,1)") + theme_minimal()
-ce.pacf.4 <- ggPacf(fit.4$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(1,1,1)") + theme_minimal()
+ce.acf.4 <- ggAcf(fit.4$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(1,1,1)")
+ce.pacf.4 <- ggPacf(fit.4$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(1,1,1)")
 ggarrange(ce.acf.4, ce.pacf.4, ncol = 2) # Figure XYZ
 
-checkresiduals(fit.1, theme = theme_minimal()) # Appendix XYZ
-checkresiduals(fit.3, theme = theme_minimal()) # Figure XYZ
-checkresiduals(fit.4, theme = theme_minimal()) # Appendix XYZ
+checkresiduals(fit.1) # Appendix XYZ
+checkresiduals(fit.3) # Figure XYZ
+checkresiduals(fit.4) # Appendix XYZ
 autoplot(fit.4) # Figure XYZ
 
 # Comparing our models for ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,1)[4], we see that the latter has slightly
@@ -229,7 +224,7 @@ autoplot(fit.4) # Figure XYZ
 
 (fit.arima <- auto.arima(ts.train[,2]))
 summary(fit.arima)
-checkresiduals(fit.arima, theme = theme_minimal())
+checkresiduals(fit.arima)
 
 # COMPARING ACF/PACF OF MODEL AND RAW CONSUMPTION DATA
 
@@ -239,36 +234,30 @@ checkresiduals(fit.arima, theme = theme_minimal())
 # correlation between the error terms of consumption between different lags. This is important to resolve, because
 # ARIMA assumes uncorrelated future errors.
 
-ce.acf <- ggAcf(ts.train[,2]) + ylab("") + ggtitle("ACF for Final Consumption Exp. (in million AUD)") + theme_minimal()
-ce.pacf <- ggPacf(ts.train[,2]) + ylab("") + ggtitle("PACF for Final Consumption Exp. (in million AUD)") + theme_minimal()
+ce.acf <- ggAcf(ts.train[,2]) + ylab("") + ggtitle("ACF for Final Consumption Exp. (in million AUD)")
+ce.pacf <- ggPacf(ts.train[,2]) + ylab("") + ggtitle("PACF for Final Consumption Exp. (in million AUD)")
 ggarrange(ce.acf, ce.pacf,
           ce.acf.4, ce.pacf.4, 
           ncol = 2, nrow = 2) # Figure XYZ
 
-# DATA FORECAST
-
+# DATA FORECAST ----
 # More observations towards increasing PI, why it is increasing and connectio to pdq and PDQ
-
-fit.3 %>% 
-  forecast(h = 39) %>% 
-  autoplot(., series = "Forecast") +
-  autolayer(ts.test[,2], series = "Actual") +
+autoplot(forecast(fit.3, h =39), series = "Forecast") +
+  autolayer(test[,2], series = "Actual") +
   ggtitle("Final Consumption Expenditure Prediction",
           subtitle = "ARIMA based forecast fits the actual data quite well, Prediction Intervals increase due to included differences") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
-  scale_x_continuous(limits = c(1990,2020)) +
-  theme_minimal()
+  scale_x_continuous(limits = c(1990,2020))
 
 # FORECAST WITH INCOME AS EXPLANATORY
 # need for Breusch-Godfrey test?
-
 (fit.arima.adv.1 <- Arima(ts.train[,2], order = c(0,0,0), seasonal = c(0,0,0), xreg = ts.train[,1]))
-ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("ACF for Regression w/ ARIMA(0,0,0)(0,0,0)") + theme_minimal()
-ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("PACF for Regression w/ ARIMA(0,0,0)(0,0,0)") + theme_minimal()
+ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("ACF for Regression w/ ARIMA(0,0,0)(0,0,0)")
+ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("PACF for Regression w/ ARIMA(0,0,0)(0,0,0)")
 
 ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2)
-checkresiduals(fit.arima.adv.1, theme = theme_minimal())
+checkresiduals(fit.arima.adv.1)
 
 # The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model 
 # (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's
@@ -280,19 +269,18 @@ checkresiduals(fit.arima.adv.1, theme = theme_minimal())
 (fit.arima.adv.2 <- Arima(ts.train[,2], order = c(1,1,0), seasonal = c(0,1,1), xreg = ts.train[,1]))
 ce.acf.adv.2 <- ggAcf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(0,1,1)") + 
-  theme_minimal()
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(0,1,1)")
+
 ce.pacf.adv.2 <- ggPacf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(0,1,1)") + 
-  theme_minimal()
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(0,1,1)")
 
 ggarrange(ce.acf.adv.2,ce.pacf.adv.2, ncol = 2)
-checkresiduals(fit.arima.adv.2, theme = theme_minimal())
+checkresiduals(fit.arima.adv.2)
 
 
-ts[,2] %>% log() %>% nsdiffs()
-ts[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
+tse[,2] %>% log() %>% nsdiffs()
+tse[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
 
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,1]))
@@ -301,7 +289,6 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
       "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv, type = "innovation")) %>% 
   autoplot(facets = T) +
   ggtitle("Comparison of Forecast and ARIMA Errors",
-          subtitle = "ARIMA errors resemlbe a white noise series") +
-  theme_minimal()
+          subtitle = "ARIMA errors resemlbe a white noise series")
 
 checkresiduals(fit.arima.adv, theme = theme_minimal())
