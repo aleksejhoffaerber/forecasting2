@@ -217,7 +217,7 @@ autoplot(fit.4) # Figure XYZ
 # ARIMA(1,1,1)(0,1,1)[4] is picked, based on the unit root space optimization to guarantee stationarity.
 # Also, the obtained ARIMA coefficients remain highly statistically singificant. 
 
-fit.arima <- auto.arima(ts.train[,2])
+(fit.arima <- auto.arima(ts.train[,2]))
 summary(fit.arima)
 checkresiduals(fit.arima, theme = theme_minimal())
 
@@ -251,3 +251,45 @@ fit.3 %>%
   theme_minimal()
 
 # FORECAST WITH INCOME AS EXPLANATORY
+# need for Breusch-Godfrey test?
+
+(fit.arima.adv.1 <- Arima(ts.train[,2], order = c(0,0,0), seasonal = c(0,0,0), xreg = ts.train[,1]))
+ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("ACF for Regression w/ ARIMA(0,0,0)(0,0,0)") + theme_minimal()
+ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("PACF for Regression w/ ARIMA(0,0,0)(0,0,0)") + theme_minimal()
+
+ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2)
+checkresiduals(fit.arima.adv.1, theme = theme_minimal())
+
+# The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model 
+# (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's
+# why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model we observe ACF spikes 
+# for lag 1 and 4, suggesting a q- and Q-value of 1. PACF spikes for lag 1, indicating that a p = 1.
+# Additionally, a high degree of autocorrelation after every 4 lags indicates that seasonal differencing should be applied as 
+# well.
+
+(fit.arima.adv.2 <- Arima(ts.train[,2], order = c(1,1,0), seasonal = c(0,1,1), xreg = ts.train[,1]))
+ce.acf.adv.2 <- ggAcf(fit.arima.adv.2$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(0,1,1)") + 
+  theme_minimal()
+ce.pacf.adv.2 <- ggPacf(fit.arima.adv.2$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(0,1,1)") + 
+  theme_minimal()
+
+ggarrange(ce.acf.adv.2,ce.pacf.adv.2, ncol = 2)
+checkresiduals(fit.arima.adv.2, theme = theme_minimal())
+
+
+
+(fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,1]))
+
+cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"),
+      "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv, type = "innovation")) %>% 
+  autoplot(facets = T) +
+  ggtitle("Comparison of Forecast and ARIMA Errors",
+          subtitle = "ARIMA errors resemlbe a white noise series") +
+  theme_minimal()
+
+checkresiduals(fit.arima.adv, theme = theme_minimal())
+
