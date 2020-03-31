@@ -252,36 +252,124 @@ autoplot(forecast(fit.3, h =39), series = "Forecast") +
 
 # FORECAST WITH INCOME AS EXPLANATORY
 # need for Breusch-Godfrey test?
-(fit.arima.adv.1 <- Arima(ts.train[,2], order = c(0,0,0), seasonal = c(0,0,0), xreg = ts.train[,1]))
-ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("ACF for Regression w/ ARIMA(0,0,0)(0,0,0)")
-ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) + ylab("") + ggtitle("PACF for Regression w/ ARIMA(0,0,0)(0,0,0)")
+(fit.arima.adv.1 <- Arima(ts.train[,2], order = c(0,1,0), seasonal = c(0,1,0), xreg = ts.train[,1]))
+ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for Regression w/ ARIMA(0,1,0)(0,1,0)") + 
+  theme_minimal()
+ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for Regression w/ ARIMA(0,1,0)(0,1,0)") + 
+  theme_minimal()
 
 ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2)
 checkresiduals(fit.arima.adv.1)
 
 # The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model 
 # (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's
-# why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model we observe ACF spikes 
-# for lag 1 and 4, suggesting a q- and Q-value of 1. PACF spikes for lag 1, indicating that a p = 1.
-# Additionally, a high degree of autocorrelation after every 4 lags indicates that seasonal differencing should be applied as 
-# well.
+# why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model, that is already 
+# adjusted with d = D = 1, as we observed with the KPSS test before in order to guarantee non-stationarity of the data, 
+# we still observe significant ACF spikes for lag 1 and 4, suggesting a q- and Q-value of 1. 
+# PACF spikes for lag 1 and 4 also indicate that p = P = 1. Because we need to make our model selection choice depend 
+# upon Information Criteria, we run multiple models using variations of p, P, q, Q  in order to determine
+# the best suitable model. We use AICc, to correct for small-sample equivalents, rather than BIC that is not suitable
+# for this quest, as finding a "true underlying" model will not yield in the best possible forecasts 
+# (Hyndman & Athanasopoulos, 2018).
 
-(fit.arima.adv.2 <- Arima(ts.train[,2], order = c(1,1,0), seasonal = c(0,1,1), xreg = ts.train[,1]))
+(arima.reg.comp <- 
+  rbind(
+  cbind("ARIMA(1,1,1)(1,1,1)", Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,1), xreg = ts.train[,1])$aicc),
+  cbind("ARIMA(1,1,1)(1,1,0)", Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,0), xreg = ts.train[,1])$aicc),
+  cbind("ARIMA(1,1,1)(0,1,1)", Arima(ts.train[,2], order = c(0,1,1), seasonal = c(1,1,0), xreg = ts.train[,1])$aicc),
+  cbind("ARIMA(1,1,1)(0,1,0)", Arima(ts.train[,2], order = c(0,1,1), seasonal = c(1,1,0), xreg = ts.train[,1])$aicc),
+    
+  cbind("ARIMA(1,1,0)(1,1,1)", Arima(ts.train[,2], order = c(1,1,0), seasonal = c(1,1,1), xreg = ts.train[,1])$aicc),
+  cbind("ARIMA(1,1,0)(0,1,1)", Arima(ts.train[,2], order = c(1,1,0), seasonal = c(1,1,1), xreg = ts.train[,1])$aicc),
+  cbind("ARIMA(0,1,0)(1,1,1)", Arima(ts.train[,2], order = c(1,1,0), seasonal = c(1,1,1), xreg = ts.train[,1])$aicc),
+  
+  cbind("ARIMA(0,1,1)(1,1,1)", Arima(ts.train[,2], order = c(0,1,1), seasonal = c(1,1,1), xreg = ts.train[,1])$aicc),
+  cbind("ARIMA(0,1,1)(1,1,0)", Arima(ts.train[,2], order = c(0,1,1), seasonal = c(1,1,0), xreg = ts.train[,1])$aicc),
+  cbind("ARIMA(0,1,0)(1,1,1)", Arima(ts.train[,2], order = c(0,1,0), seasonal = c(1,1,1), xreg = ts.train[,1])$aicc)) %>% 
+  as.data.frame() %>% 
+    arrange(desc(V2)))
+
+# Our calculations suggest, that we should focus on the Regression with ARIMA(0,1,0)(1,1,1) model. A quick look into the 
+# residuals of the model gives us a hint, that based on the ACF this model is affected by high autocorrelation. We instead 
+# opt for the ARIMA(1,1,0)(1,1,1). 
+
+(fit.arima.adv.2 <- Arima(ts.train[,2], order = c(0,1,0), seasonal = c(1,1,1), xreg = ts.train[,1]))
 ce.acf.adv.2 <- ggAcf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(0,1,1)")
+  ggtitle("ACF for Regression w/ ARIMA(0,1,0)(1,1,1)")
 
 ce.pacf.adv.2 <- ggPacf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(0,1,1)")
+  ggtitle("PACF for Regression w/ ARIMA(0,1,0)(1,1,1)")
 
-ggarrange(ce.acf.adv.2,ce.pacf.adv.2, ncol = 2)
-checkresiduals(fit.arima.adv.2)
+ggarrange(ce.acf.adv.2, ce.pacf.adv.2)
 
+# Reestimation with altered ARIMA(1,1,0)(1,1,1) model
 
-tse[,2] %>% log() %>% nsdiffs()
-tse[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
+# This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, 
+# as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during 
+# the financial crisis in 2007/08. 
+(
+  fit.arima.adv.3 <- Arima(ts.train[,2], order = c(1,1,0), seasonal = c(1,1,1), xreg = ts.train[,1]))
+ce.acf.adv.3 <- ggAcf(fit.arima.adv.3$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  theme_minimal()
+ce.pacf.adv.3 <- ggPacf(fit.arima.adv.3$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  theme_minimal()
+ggarrange(ce.acf.adv.3, ce.pacf.adv.3)
 
+cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regression"),
+      "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.3, type = "innovation")) %>% 
+  autoplot(facets = T) +
+  ggtitle("Comparison of Forecast and ARIMA(1,1,0)(1,1,1) Errors",
+          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series") +
+  theme_minimal()
+
+checkresiduals(fit.arima.adv.3, theme = theme_minimal())
+
+# The Ljung-Box indicates significant autocorrelation in the residuals, a reason why we opt for 
+# ARIMA(1,1,1)(1,1,1) even despite it slower AICc. Still, it is more important to cope with ACF, PACF and non-stationarity,
+# to ensure good long-term forecastability.
+
+(fit.arima.adv.4 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,1), xreg = ts.train[,1]))
+ce.acf.adv.4 <- ggAcf(fit.arima.adv.4$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  theme_minimal()
+ce.pacf.adv.4 <- ggPacf(fit.arima.adv.4$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  theme_minimal()
+ggarrange(ce.acf.adv.4, ce.pacf.adv.4)
+
+checkresiduals(fit.arima.adv.4, theme = theme_minimal())
+
+# When looking at the coefficients, we observe that SAR1, the seasonal component is not significant. Beside that,
+# also the xreg component is not significant, but we include it because of the task. We delete xsar1 from our model,
+# and rerun it to obtain our optimal and final model ARIMA(1,1,1)(0,1,1):
+
+(fit.arima.adv.5 <- Arima(ts.train[,2], order = c(1,0,0), seasonal = c(0,1,1), include.constant = T, xreg = ts.train[,1]))
+ce.acf.adv.5 <- ggAcf(fit.arima.adv.5$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  theme_minimal()
+ce.pacf.adv.5 <- ggPacf(fit.arima.adv.5$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
+  theme_minimal()
+ggarrange(ce.acf.adv.5, ce.pacf.adv.5)
+
+checkresiduals(fit.arima.adv.5, theme = theme_minimal())
+
+# On the other side, the automated approach yields in a slightly different model, that could not be estimated in our manual 
+# setting, due to non-stationarity issues. 
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,1]))
 
