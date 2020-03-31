@@ -404,3 +404,4 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
   theme_minimal()
 
 checkresiduals(fit.arima.adv, theme = theme_minimal())
+
