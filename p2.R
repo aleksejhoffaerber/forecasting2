@@ -37,8 +37,8 @@ df %<>% select(-Date) %>%
   rename(Date = "as.double(time(tse))")
 
 # split into test and train set (10 years of prediction)
-tse.train <- tse(df[,2:3], start = c(1959,3), end = c(2009,4), frequency = 4)
-tse.test <- tse(df[,2:3], start = c(2010,1), end = c(2019,4), frequency = 4)
+ts.train <- window(tse, start = c(1959,3), end = c(2009,4), frequency = 4)
+ts.test <- window(tse, start = c(2010,1), frequency = 4)
 
 # ANALYSIS IF TIME SERIES
 skim(df)
@@ -201,14 +201,15 @@ ce.pacf.4 <- ggPacf(fit.4$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)
 ggarrange(ce.acf.4, ce.pacf.4, ncol = 2) # Figure XYZ
 
 checkresiduals(fit.1, theme = theme_minimal()) # Appendix XYZ
-checkresiduals(fit.3, theme = theme_minimal()) # Appendix XYZ
-checkresiduals(fit.4, theme = theme_minimal()) # Figure XYZ
+checkresiduals(fit.3, theme = theme_minimal()) # Figure XYZ
+checkresiduals(fit.4, theme = theme_minimal()) # Appendix XYZ
 autoplot(fit.4) # Figure XYZ
 
 # Comparing our models for ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,1)[4], we see that the latter has slightly
 # better ACF and PACF spike conditions. Also, the Ljung-Box test is supporting this assumptions as the autocorrelation 
-# in the ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,0)[4] is still highly significant as opposed by the latter model. For 
-# detailed figures and graphs, please see the Appendix. 
+# in the ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,0)[4] is still highly significant as opposed by the latter model.
+# The series is now a white-noise series. The distribution of the residuals also fits the assumed distribution pattern, despite
+# the small outlier at the left side. For detailed figures and graphs, please see the Appendix. 
 
 # Because KPSS can only be used to determine d and D, we need to employ Information Criteria, such as AICc, to 
 # pick the correct p,q,P,Q values. This is already incorporated in the automated ARIMA model selection that 
@@ -235,3 +236,18 @@ ggarrange(ce.acf, ce.pacf,
           ncol = 2, nrow = 2) # Figure XYZ
 
 # DATA FORECAST
+
+# More observations towards increasing PI, why it is increasing and connectio to pdq and PDQ
+
+fit.3 %>% 
+  forecast(h = 39) %>% 
+  autoplot(., series = "Forecast") +
+  autolayer(ts.test[,2], series = "Actual") +
+  ggtitle("Final Consumption Expenditure Prediction",
+          subtitle = "ARIMA based forecast fits the actual data quite well, Prediction Intervals increase due to included differences") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(1990,2020)) +
+  theme_minimal()
+
+# FORECAST WITH INCOME AS EXPLANATORY
