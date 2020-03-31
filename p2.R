@@ -13,6 +13,7 @@ library(readr)
 library(skimr)
 library(urca)
 library(tsDyn)
+library(ForecastComb)
 
 theme_set(theme_minimal())
 # 1. Loading data ----
@@ -401,14 +402,99 @@ fcs.adv.plot <- autoplot(fcs.adv, series = "Fitted Consumption") +
   ylab("Consumption (in million AUD)") +
   scale_x_continuous(limits = c(1990,2020))
 
-ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2)
+ggarrange(fcs.adv.5.plot, fcs.adv.plot, nrow = 2)
 
 
-# 9. Average of the forecasts forecast
-autoplot(forecast(fit.arima.adv, h = 39), series = "Forecast") +
-  autolayer(ts.test[,2], series = "Actual") +
-  ggtitle("Consumption Prediction based on Regression w/ ARIMA(1,0,0)(0,1,1) + Drift",
-          subtitle = "ARIMA based forecast fits the actual data quite well, Prediction Intervals increase due to included differences") +
+# 9. Consumption foreacsting with average forecast and optimal weights ----
+# Averaging models with and witohout explanatory variables ----
+fcs.3 <- forecast(fit.3, h = 40)
+comb <- (fcs.3[["mean"]]+fcs.adv.5[["mean"]])/2
+
+  c_1 <- autoplot(tse[,2]) +
+  autolayer(fcs.3, series = "Without explanatory variable", PI = F)+
+  autolayer(fcs.adv.5, series = "With explanatory variable", PI = F) +
+  autolayer(comb, series = "Combination")+
+  ggtitle("Consumption Prediction Comparison") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
-  scale_x_continuous(limits = c(1990,2020))
+  scale_x_continuous(limits = c(2000,2020))
+
+
+accuracy(fcs.3, x = ts.test[,2])
+accuracy(fcs.adv.5, x = ts.test[,2])
+accuracy(comb, x = ts.test[,2])
+
+# With the weighted parameters
+w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+fcs.3[["mean"]]))/(var(fcs.3[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+fcs.3[["mean"]]))
+rw <- 1-w
+
+comb <- rw*fcs.3[["mean"]]+w*fcs.adv.5[["mean"]]
+accuracy(comb, x = ts.test[,2])
+
+# ARIMA and autoARIMA comparison ----
+# Averaged
+comb <- (fcs.adv[["mean"]]+fcs.adv.5[["mean"]])/2
+
+c_2 <- autoplot(tse[,2]) +
+  autolayer(fcs.adv, series = "Auto Model", PI = F)+
+  autolayer(fcs.adv.5, series = "Manual", PI = F) +
+  autolayer(comb, series = "Combination")+
+  ggtitle("Consumption Prediction Comparison") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(2000,2020))
+
+
+accuracy(fcs.adv, x = ts.test[,2])
+accuracy(fcs.adv.5, x = ts.test[,2])
+accuracy(comb, x = ts.test[,2])
+
+# With the weighted parameters
+w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+fcs.adv[["mean"]]))/(var(fcs.adv[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+fcs.adv[["mean"]]))
+rw <- 1-w
+
+comb <- rw*fcs.adv[["mean"]]+w*fcs.adv.5[["mean"]]
+accuracy(comb, x = ts.test[,2])
+
+# With ETS and TBATS ----
+# Averaging
+ETS <- forecast(ets(ts.train[,2]), h = 40)
+TBATS <- forecast(tbats(ts.train[,2], biasadj = T), h = 40)
+comb1 <- (fcs.adv.5[["mean"]]+TBATS[["mean"]])/2
+comb2 <- (fcs.adv.5[["mean"]]+ETS[["mean"]])/2
+
+c_3 <- autoplot(tse[,2]) +
+  autolayer(ETS, series = "ETS", PI = F)+
+  autolayer(TBATS, series = "TBATS", PI = F) +
+  autolayer(fcs.adv.5, series = "Manual ARIMA", PI = F) +
+  autolayer(comb1, series = "ARIMA + TBATS")+
+  autolayer(comb1, series = "ARIMA + ETS")+
+  ggtitle("Consumption Prediction Comparison") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(2000,2020))
+
+# With weighted parameters
+# For TBATS
+w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+TBATS[["mean"]]))/(var(TBATS[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+TBATS[["mean"]]))
+rw <- 1-w
+comb1 <- rw*TBATS[["mean"]]+w*fcs.adv.5[["mean"]]
+accuracy(comb, x = ts.test[,2])
+
+# For ETS
+w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+ETS[["mean"]]))/(var(ETS[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+ETS[["mean"]]))
+rw <- 1-w
+comb2 <- rw*ETS[["mean"]]+w*fcs.adv.5[["mean"]]
+accuracy(comb2, x = ts.test[,2])
+
+# 10. Make plot with data and forecasts ----
+# ARIMA + Dynamic ARIMA
+c_1
+
+# ARIMA Manual + ARIMA Auto
+c_2
+
+# ARIMA+ETS and ARIMA+TBATS
+c_3
+
+# 11. Forecast measures and comparison ----
