@@ -248,6 +248,7 @@ ce.acf.5 <- ggAcf(fit.5$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,2)(1,
 ce.pacf.5 <- ggPacf(fit.5$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)(1,1,1)") + theme_minimal()
 ggarrange(ce.acf.5, ce.pacf.5, ncol = 2) # Figure XYZ
 
+autoplot(fit.5) # Figure XYZ
 # For detailed figures and graphs showing the other scenarios, please see the Appendix. 
 
 # Because KPSS can only be used to determine d and D, we need to employ Information Criteria, such as AICc, to 
