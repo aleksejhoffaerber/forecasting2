@@ -84,7 +84,7 @@ ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
 # Based on the distribution of the residuals we also see, that stabilisation of variance and mean are particularly 
 # important in order to design a suitable forecasting model based on AR(I)MA.
 
-# For the first characteristic we apply a log-transformation of the underlying data. But, this is not enough, as after the 
+# For the first characteristic we apply a log-transformation. But, this is not enough, as after the 
 # log-transformation not only the autocorrelation and heteroscedasticity issues remain, but also because the distibution
 # of the residuals does not have a fitting distribution, that would be based on a standard distribution (Appendix XYZ). 
 # For the latter part, we need to work with reasonable differencing methods so that we stabilize the mean and maintain 
@@ -151,7 +151,7 @@ tse[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
 # reliance of our forecast in the long-term horizon. Based on the previously conducted KPSS test, we already know that 
 # non-stationarity and possible cointegration of our series is an issue. These unit root tests already indicated that in
 # order to guarantuee that the characteristic equation lies within the unit circle (Hyndman & Athanasopoulos, 2018), we
-# must take the differences. 
+# must take the differences in order to assure stationarity.
 
 fit.tse <- tslm(formula = tse[,1] ~ tse[,2]) 
 summary(fit.tse)
@@ -161,5 +161,77 @@ summary(ur.df(residuals(fit.tse), type = "drift", lag = 1))
 # issues in the regression setting. But it indicates, that both variables have a significant, cointegrated long-term
 # relationship which can be used to design our forecasts.
 
-# 
+# IDENTIFY ARIMA MODEL FOR CONSUMPTION ----
 
+# Firstly, based on the previously determined time series characteristics, we know that we must employ a first-order lag differences 
+# for our autoregression (AR) part and a first-order seasonal component for our quarterly data, meaining that d and D are
+# equal to one in order to reflect the observations and KPSS test from before. Secondly, we test for an optimal value 
+# for p and q, based on ACF and PACF test. Because we already know that
+# we have high autocorrelation in our data. A spike in the ACF and PACF in Figure XYZ indicates that we have significant
+# spikes for lag 1 in both charts (Hyndman & Athanasopoulos, 2018), meaning that we should set p = q = 1. 
+
+ts.train[,2] %>% 
+  diff(lag = 4) %>% 
+  diff() %>% 
+  ggtsdisplay(., theme = theme_minimal()) # Figure XYZ
+
+# Based on the resulting assumptions, we conlude that an ARIMA(1,1,1)(0,1,0)[4] might be suitable. The last check is to 
+# validate whether we need to include a Q or P value at least. Looking at the ACF and PACF plots of our resulting model, 
+# we can infer that we still have a high negative spike for lag 4, indicating that we need to account for the seasonal
+# component in the error term. We adjust our model therefore to reflect this change in the MA(q) model.
+
+fit.1 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(0,1,0))
+ce.acf.1 <- ggAcf(fit.1$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(0,1,0)") + theme_minimal()
+ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,0)") + theme_minimal()
+ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # Appendix XYZ
+
+fit.2 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,0))
+ce.acf.2 <- ggAcf(fit.2$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(1,1,0)") + theme_minimal()
+ce.pacf.2 <- ggPacf(fit.2$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(1,1,0)") + theme_minimal()
+ggarrange(ce.acf.2, ce.pacf.2, ncol = 2) # Appendix XYZ
+
+fit.3 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(0,1,1))
+ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(0,1,1)") + theme_minimal() 
+ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,1)") + theme_minimal()
+ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Figure XYZ
+
+fit.4 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,1))
+ce.acf.4 <- ggAcf(fit.4$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,1)(1,1,1)") + theme_minimal()
+ce.pacf.4 <- ggPacf(fit.4$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(1,1,1)") + theme_minimal()
+ggarrange(ce.acf.4, ce.pacf.4, ncol = 2) # Figure XYZ
+
+checkresiduals(fit.1, theme = theme_minimal()) # Appendix XYZ
+checkresiduals(fit.3, theme = theme_minimal()) # Appendix XYZ
+checkresiduals(fit.4, theme = theme_minimal()) # Figure XYZ
+autoplot(fit.4) # Figure XYZ
+
+# Comparing our models for ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,1)[4], we see that the latter has slightly
+# better ACF and PACF spike conditions. Also, the Ljung-Box test is supporting this assumptions as the autocorrelation 
+# in the ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,0)[4] is still highly significant as opposed by the latter model. For 
+# detailed figures and graphs, please see the Appendix. 
+
+# Because KPSS can only be used to determine d and D, we need to employ Information Criteria, such as AICc, to 
+# pick the correct p,q,P,Q values. This is already incorporated in the automated ARIMA model selection that 
+# calculates different ARIMA models and picks the best models based on those Informaiton Criteria. In fact, exactly the same 
+# ARIMA(1,1,1)(0,1,1)[4] is picked, based on the unit root space optimization to guarantee stationarity.
+# Also, the obtained ARIMA coefficients remain highly statistically singificant. 
+
+fit.arima <- auto.arima(ts.train[,2])
+summary(fit.arima)
+checkresiduals(fit.arima, theme = theme_minimal())
+
+# COMPARING ACF/PACF OF MODEL AND RAW CONSUMPTION DATA
+
+# Comparing the ACF and PACF plots of the raw Final Consumption Expenditure and ARIMA data, we can observe the following:
+# 1) The autocorrelation in the residuals is resolved. This was important to resolve, as ARIMA assumes that historical 
+# patterns will not change during the forecast. 2) The issue of a high partial ACF spike at lag 1, indicating 
+# correlation between the error terms of consumption between different lags. This is important to resolve, because
+# ARIMA assumes uncorrelated future errors.
+
+ce.acf <- ggAcf(ts.train[,2]) + ylab("") + ggtitle("ACF for Final Consumption Exp. (in million AUD)") + theme_minimal()
+ce.pacf <- ggPacf(ts.train[,2]) + ylab("") + ggtitle("PACF for Final Consumption Exp. (in million AUD)") + theme_minimal()
+ggarrange(ce.acf, ce.pacf,
+          ce.acf.4, ce.pacf.4, 
+          ncol = 2, nrow = 2) # Figure XYZ
+
+# DATA FORECAST
