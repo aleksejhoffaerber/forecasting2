@@ -289,7 +289,9 @@ checkresiduals(fit.arima.adv.1)
   cbind("ARIMA(0,1,1)(1,1,0)", Arima(ts.train[,2], order = c(0,1,1), seasonal = c(1,1,0), xreg = ts.train[,1])$aicc),
   cbind("ARIMA(0,1,0)(1,1,1)", Arima(ts.train[,2], order = c(0,1,0), seasonal = c(1,1,1), xreg = ts.train[,1])$aicc)) %>% 
   as.data.frame() %>% 
-    arrange(desc(V2)))
+    arrange(desc(V2)) %>% 
+    rename(Model = V1,
+           AICc = V2))
 
 # Our calculations suggest, that we should focus on the Regression with ARIMA(0,1,0)(1,1,1) model. A quick look into the 
 # residuals of the model gives us a hint, that based on the ACF this model is affected by high autocorrelation. We instead 
@@ -311,14 +313,16 @@ ggarrange(ce.acf.adv.2, ce.pacf.adv.2)
 # This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, 
 # as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during 
 # the financial crisis in 2007/08. 
-(
-  fit.arima.adv.3 <- Arima(ts.train[,2], order = c(1,1,0), seasonal = c(1,1,1), xreg = ts.train[,1]))
+(fit.arima.adv.3 <- Arima(ts.train[,2], order = c(1,1,0), seasonal = c(1,1,1), xreg = ts.train[,1]))
+
 ce.acf.adv.3 <- ggAcf(fit.arima.adv.3$residuals) + 
   ylab("") + 
   ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
+
 ce.pacf.adv.3 <- ggPacf(fit.arima.adv.3$residuals) + 
   ylab("") + 
   ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
+
 ggarrange(ce.acf.adv.3, ce.pacf.adv.3)
 
 cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regression"),
@@ -339,6 +343,7 @@ ce.acf.adv.4 <- ggAcf(fit.arima.adv.4$residuals) +
 ce.pacf.adv.4 <- ggPacf(fit.arima.adv.4$residuals) + 
   ylab("") + 
   ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
+
 ggarrange(ce.acf.adv.4, ce.pacf.adv.4)
 
 checkresiduals(fit.arima.adv.4)
