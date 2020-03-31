@@ -373,26 +373,26 @@ checkresiduals(fit.arima.adv.4, theme = theme_minimal())
 (fit.arima.adv.5 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(0,1,1), xreg = ts.train[,1]))
 ce.acf.adv.5 <- ggAcf(fit.arima.adv.5$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(1,0,0)(0,1,1) and Drift") + 
+  ggtitle("ACF for Regression w/ ARIMA(1,1,1)(0,1,1) no Drift") + 
   theme_minimal()
 ce.pacf.adv.5 <- ggPacf(fit.arima.adv.5$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(1,0,0)(0,1,1) and Drift") + 
+  ggtitle("PACF for Regression w/ ARIMA(1,1,1)(0,1,1) no Drift") + 
   theme_minimal()
 ggarrange(ce.acf.adv.5, ce.pacf.adv.5)
 
 cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.5, type = "regression"),
       "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.5, type = "innovation")) %>% 
   autoplot(facets = T) +
-  ggtitle("Comparison of Forecast and ARIMA(1,0,0)(0,1,1) Errors",
-          subtitle = "Trend in Regression Errors left, ARIMA errors resemlbe a white noise series") +
+  ggtitle("Comparison of Forecast and ARIMA(1,1,1)(0,1,1) Errors",
+          subtitle = "Trend in Regression Errors left on purpose, ARIMA errors resemlbe a white noise series") +
   theme_minimal()
 
 checkresiduals(fit.arima.adv.5, theme = theme_minimal())
 
 # On the other side, the automated approach yields in a different model variation, that was already discussed above
-# but discarded because of its negative impact on ACF and PACF plots, even though it yields in higher AICc. In the next exercise
-# both approaches will be compared in order to determine the winner in terms of test-set performance.
+# but discarded because of its negative impact on ACF and PACF plots, even though it yields in higher AICc. Both 
+# forecasts will be compared in terms of test-set performance to determine the winner.
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,1]))
 
@@ -405,3 +405,36 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
 
 checkresiduals(fit.arima.adv, theme = theme_minimal())
 
+# Based on a comparison, we see that the the manual ARIMA(1,1,1)(0,1,1) model performs better in terms of data fit
+# and also in terms of its Prediction Interval width. 
+
+# Q: Should add some subtitles here, but do not know how rn.
+fcs.adv.5 <- forecast(fit.arima.adv.5, xreg = ts.test[,1])
+fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,1])
+
+fcs.adv.5.plot <- autoplot(fcs.adv.5, series = "Fitted Consumption") +
+  autolayer(ts.test[,2], series = "Actual Consumption") +
+  xlab("Years") +
+  ylab("Consumption (in million AUD)") +
+  scale_x_continuous(limits = c(1990,2020))+
+  theme_minimal()
+
+fcs.adv.plot <- autoplot(fcs.adv, series = "Fitted Consumption") +
+  autolayer(ts.test[,2], series = "Actual Consumption") +
+  xlab("Years") +
+  ylab("Consumption (in million AUD)") +
+  scale_x_continuous(limits = c(1990,2020))+
+  theme_minimal()
+
+ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2)
+
+
+# AVERAGE OF THE FORECASTS FORECAST
+autoplot(forecast(fit.arima.adv, h = 39), series = "Forecast") +
+  autolayer(ts.test[,2], series = "Actual") +
+  ggtitle("Consumption Prediction based on Regression w/ ARIMA(1,0,0)(0,1,1) + Drift",
+          subtitle = "ARIMA based forecast fits the actual data quite well, Prediction Intervals increase due to included differences") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(1990,2020)) +
+  theme_minimal()
