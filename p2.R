@@ -255,12 +255,10 @@ autoplot(forecast(fit.3, h =39), series = "Forecast") +
 (fit.arima.adv.1 <- Arima(ts.train[,2], order = c(0,1,0), seasonal = c(0,1,0), xreg = ts.train[,1]))
 ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(0,1,0)(0,1,0)") + 
-  theme_minimal()
+  ggtitle("ACF for Regression w/ ARIMA(0,1,0)(0,1,0)")
 ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(0,1,0)(0,1,0)") + 
-  theme_minimal()
+  ggtitle("PACF for Regression w/ ARIMA(0,1,0)(0,1,0)")
 
 ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2)
 checkresiduals(fit.arima.adv.1)
@@ -317,22 +315,18 @@ ggarrange(ce.acf.adv.2, ce.pacf.adv.2)
   fit.arima.adv.3 <- Arima(ts.train[,2], order = c(1,1,0), seasonal = c(1,1,1), xreg = ts.train[,1]))
 ce.acf.adv.3 <- ggAcf(fit.arima.adv.3$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
 ce.pacf.adv.3 <- ggPacf(fit.arima.adv.3$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
 ggarrange(ce.acf.adv.3, ce.pacf.adv.3)
 
 cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regression"),
       "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.3, type = "innovation")) %>% 
   autoplot(facets = T) +
   ggtitle("Comparison of Forecast and ARIMA(1,1,0)(1,1,1) Errors",
-          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series") +
-  theme_minimal()
-
-checkresiduals(fit.arima.adv.3, theme = theme_minimal())
+          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series")
+checkresiduals(fit.arima.adv.3)
 
 # The Ljung-Box indicates significant autocorrelation in the residuals, a reason why we opt for 
 # ARIMA(1,1,1)(1,1,1) even despite it slower AICc. Still, it is more important to cope with ACF, PACF and non-stationarity,
@@ -341,15 +335,13 @@ checkresiduals(fit.arima.adv.3, theme = theme_minimal())
 (fit.arima.adv.4 <- Arima(ts.train[,2], order = c(1,1,1), seasonal = c(1,1,1), xreg = ts.train[,1]))
 ce.acf.adv.4 <- ggAcf(fit.arima.adv.4$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
 ce.pacf.adv.4 <- ggPacf(fit.arima.adv.4$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
 ggarrange(ce.acf.adv.4, ce.pacf.adv.4)
 
-checkresiduals(fit.arima.adv.4, theme = theme_minimal())
+checkresiduals(fit.arima.adv.4)
 
 # When looking at the coefficients, we observe that SAR1, the seasonal component is not significant. Beside that,
 # also the xreg component is not significant, but we include it because of the task. We delete xsar1 from our model,
@@ -358,15 +350,13 @@ checkresiduals(fit.arima.adv.4, theme = theme_minimal())
 (fit.arima.adv.5 <- Arima(ts.train[,2], order = c(1,0,0), seasonal = c(0,1,1), include.constant = T, xreg = ts.train[,1]))
 ce.acf.adv.5 <- ggAcf(fit.arima.adv.5$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("ACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
 ce.pacf.adv.5 <- ggPacf(fit.arima.adv.5$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("PACF for Regression w/ ARIMA(1,1,0)(1,1,1)")
 ggarrange(ce.acf.adv.5, ce.pacf.adv.5)
 
-checkresiduals(fit.arima.adv.5, theme = theme_minimal())
+checkresiduals(fit.arima.adv.5)
 
 # On the other side, the automated approach yields in a slightly different model, that could not be estimated in our manual 
 # setting, due to non-stationarity issues. 
@@ -379,4 +369,4 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
   ggtitle("Comparison of Forecast and ARIMA Errors",
           subtitle = "ARIMA errors resemlbe a white noise series")
 
-checkresiduals(fit.arima.adv, theme = theme_minimal())
+checkresiduals(fit.arima.adv)
