@@ -16,29 +16,30 @@ library(tsDyn)
 library(ForecastComb)
 
 theme_set(theme_minimal())
+
 # 1. Loading data ----
-# Loading .csv file containing the important data pointse on "Net national disposable income" (di) and "Final consumption expenditure" (ce)
+# Loading .csv file containing the important data points on "Net national disposable income" (di) and "Final consumption expenditure" (ce)
 # for all the countries available. Filtering out unnecessary columns, and changing data format to a wide format
 df <- read_csv("data.csv")
 
 df %<>%
   filter(LOCATION == "AUS") %>% 
   select(SUBJECT, TIME, Value) %>%
-  tidyr::spread(SUBJECT, Value) %>% # only calling single function to reduce conflictse between tidyr and dplyr
+  tidyr::spread(SUBJECT, Value) %>% # only calling single function to reduce conflicts between tidyr and dplyr
   rename(Date = TIME,
          di = B6NS1,
          ce = P3S1)
 
-# creating tse object
+# creating time-series object
 tse <- ts(df[,2:3], start = c(1959,3), end = c(2019,4), frequency = 4)
 
-# binding date information from tse object to original df (easier than transforming the original format to a R date format)
+# binding date information from ts object to original df (easier than transforming the original format to a R date format)
 df <- cbind(as.double(time(tse)), df) 
 
 df %<>% select(-Date) %>% 
   rename(Date = "as.double(time(tse))")
 
-# 2. Split into test and train set (10 years of prediction) ----
+# 2. Split into test and train set (10 years of prediction, 39 quarters) ----
 ts.train <- window (tse,
                start = c(1959,3),
                end = c(2009,4),
@@ -49,20 +50,19 @@ ts.test <- window (tse,
               frequency = 4)
 
 # 3. Time-series analysis and summaries ----
-skim(df)
 
-# Having a look at the time series, we see a high amount of cointegration between both series that needs
-# to be analysed and corrected later using the Augmented Dickey-Fuller Test. We also observe that the seasonality and 
-# trend componentse are similar for both series and also that with later years the distance between the series 
-# increases slightly. Also, false regression can be discarded as a potential issue, as disposable available income
-# is theoretically impacting the consumption of the population, even in the long run, because consumption directly depends
-# on what one earn. 
+# Having a look at the time series, we see a high amount of correlation between both series that needs
+# to be analysed using the Augmented Dickey-Fuller (ADF) Test and corrected using Differencing and other transformations.
+# We also observe that the seasonality and trend components are similar for both series. Distance between Consumption and 
+# Income increases with the later years the distance between the series, meaning that people in Australia earn more than 
+# they spend. Also, false regression issues can be discarded as a potential issue, as disposable available income
+# is impacts the consumption of the population because consumption depends on earnings and debt available. 
 
 # Analysis of the disposable income ----
 full.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
   autolayer(tse[,2], color = "darkblue", series = "dddd") +
   ggtitle("Net National Disposable Income and Final Consumption Expenditure", 
-          subtitle = "Two time series show a high degree of cointegration") +
+          subtitle = "Two time series show a high degree of correlation") +
   scale_x_continuous(name = "Years",
                      limits = c(1960, 2020),
                      breaks = seq(1960, 2020, by = 10)) +
@@ -73,7 +73,7 @@ full.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
 zoom.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
   autolayer(tse[,2], color = "darkblue", series = "dddd") +
   ggtitle("Net National Disposable Income and Final Consumption Expenditure", 
-          subtitle = "High degree of cointegration even clearer once we focus on the last 30 years") +
+          subtitle = "High degree of correlation even clearer for trend and cycles after zoom-in") +
   scale_x_continuous(name = "Years",
                      limits = c(1990, 2020),
                      breaks = seq(1990, 2020, by = 10)) +
@@ -82,48 +82,48 @@ zoom.plot <- autoplot(tse[,1], color = "black", series = "asdasd") +
 
 ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
 
-# Checking the residuals indicates that lotse of autocorrelation, in other words: valuable information remains in the residuals,
-# that is currently not used to predict the data. This autocorrelation pattern is also typical for this type of economic 
-# time series. The significance of this issue is very high, as indicated by the Ljung-Box test. Additionally, strong trend cycles 
-# and seasonality visible in the previous, ACF, and residual plotse indicate that both series are non-stationary. 
+# Checking the residuals indicates that lots of autocorrelation remains in the residuals. In other words: 
+# valuable information that is currently not used to predict the data. This autocorrelation pattern is also 
+# typical for this type of economic data and time series. The significance of autocorrelation issue is very high, 
+# as indicated by the Ljung-Box test. Additionally, strong trend cycles and seasonality, visible in the ACF and 
+# residual plots indicate that both series are non-stationary.
 # Based on the distribution of the residuals we also see, that stabilisation of variance and mean are particularly 
 # important in order to design a suitable forecasting model based on AR(I)MA.
 
-# For the first characteristic we apply a log-transformation. But, this is not enough, as after the 
+# To deal with the economic characteristic we apply a log-transformation to the data. But, this is not enough, as after the 
 # log-transformation not only the autocorrelation and heteroscedasticity issues remain, but also because the distibution
-# of the residuals does not have a fitting distribution, that would be based on a standard distribution (Appendix XYZ). 
-# For the latter part, we need to work with reasonable differencing methods so that we stabilize the mean and maintain 
-# the interpretability of the model and itse resultse. Before we start with ditfferencing, we apply the KPSS test in order
-# to see, whether differencing is required:
+# of the residuals does not have a fitting Gauss distribution, as can be seen in _Figure 2_. To fix this, we apply differencing methods to stabilize 
+# the mean and maintain the interpretability of the model and its results. Before we start with ditfferencing, 
+# we apply the KPSS test in order to see, whether differencing is required:
 
-checkresiduals(tse[,1])
-Box.test(tse[,1], lag = 10, type = "Ljung-Box")
+checkresiduals(tse[,1]) # Figure 2
+Box.test(tse[,1], lag = 10, type = "Ljung-Box") # Appendix 1
 
 tse[,1] %>% ur.kpss() %>% summary()
 
 # Based on this output, we see that the data is non-stationary, the null hypothesis indicating stationary data, can be 
-# rejected to all p-levels from 10 to 1 percent. To guess a fitting number of differences we must scrutinise the ACF plotse:
-# Based on the previous analyses, we know that seasons and trends play a role. A way of account for both issues and to keep
-# the interpretability of the resultse is to apply first-order and seasonal differencing. In this way, we account for quarterly
-# and seasonal (so yearly) difference in the series and can interpret the resultse as _quarterly changes_. 
+# rejected to all p-levels from 10 to 1 percent. To guess a fitting number of differences we must scrutinise the ACF plots:
+# Based on the previous analyses, we know that seasons and trends play a role. A way to account for both issues and to keep
+# the interpretability of the results is to apply first-order and seasonal differencing. In this way, we account for quarterly
+# and seasonal (so yearly) difference in the series and can interpret the results as _quarterly changes_. 
 
-checkresiduals(log(tse[,1])) # Appendix 1
-checkresiduals(diff(diff(log(tse[,1]),4),1)) # Appendix 2
+checkresiduals(log(tse[,1])) # Appendix 2
+checkresiduals(diff(diff(log(tse[,1]),4),1)) # Appendix 3
 
 # As can be seen in _Appendix 2_ and after applying log-transformation, seasonal, and first-order differencing, the ACF
-# plotse looks less impacted by the issues, such as autocorrelation, heteroscedasticity, and in total: non-stationarity. 
+# plots looks less impacted by issues, such as autocorrelation, heteroscedasticity, and in total: non-stationarity. 
 # The main and variance are now stabilised. But, there are still many spikes in the ACF and residuals, 
 # but those do not follow a specific pattern. Still, the Ljung-Box test indicates that a significant amount of 
-# autocorrelation remains in the residuals, which we can not get rid off based on our toolset. Applying the KPSS test,
+# autocorrelation remains in the residuals, which we can not get rid off based on our pre-processing toolset. Specific 
+# assumptions and calculations in the ARIMA setting will account for the last issues. Applying the KPSS test,
 # we see that the data is now stationary. The difference in both test resultse is based on autocorrelation or serial correlation
 # which is a much stronger indication than simple stationarity. 
-
 
 Box.test(diff(diff(log(tse[,1]),4),1), lag = 10, type = "Ljung-Box")
 diff(diff(log(tse[,1]),4),1) %>% ur.kpss() %>% summary()
 
 # To be completely sure this transformation is correct we apply KPSS functions in order to determine lag values for 
-# the differencing. Unsuprisingly, KPSS indicates we should use first-order and seasonal differencing.
+# the differencing. Unsuprisingly, KPSS indicates to use first-order and seasonal differencing.
 
 tse[,1] %>% log() %>% nsdiffs()
 tse[,1] %>% log() %>% diff(lag = 4) %>% ndiffs()
@@ -131,16 +131,16 @@ tse[,1] %>% log() %>% diff(lag = 4) %>% ndiffs()
 # Consumption Expenditure Analysis ------
 
 # Exactly the same test and procedure will be applied to the Final Consumption Expenditure. Because both time series 
-# look very similar (see Figure XYZ), it can be inferred that a very similar transformation must be applied. This holds true, as 
-# the plotse in the Appendix show.
+# look very similar (see _Figure 1_), it can be inferred that a very similar transformation must be applied. This holds true, as 
+# the plots Appendix show.
 
-checkresiduals(tse[,2]) # Appendix 3
+checkresiduals(tse[,2]) # Appendix 4
 Box.test(tse[,2], lag = 10, type = "Ljung-Box")
 
 tse[,2] %>% ur.kpss() %>% summary()
 
 checkresiduals(log(tse[,2])) # no print
-checkresiduals(diff(diff(log(tse[,2]),4),1)) # Appendix 4
+checkresiduals(diff(diff(log(tse[,2]),4),1)) # Appendix 5
 
 Box.test(diff(diff(log(tse[,2]),4),1), lag = 10, type = "Ljung-Box")
 diff(diff(log(tse[,2]),4),1) %>% ur.kpss() %>% summary()
@@ -148,14 +148,14 @@ diff(diff(log(tse[,2]),4),1) %>% ur.kpss() %>% summary()
 tse[,2] %>% log() %>% nsdiffs()
 tse[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
 
-# we incorporate this into the data frame
+# we incorporate both log, seasonal and first-order differencing transformed series into the data frame and ts object
 
 df$di.adj <- c(c(rep(NA,5), diff(diff(log(tse[,1]),4),1)))
 df$ce.adj <- c(c(rep(NA,5), diff(diff(log(tse[,2]),4),1)))
 
 tse <- ts(df[,2:5], start = c(1959,3), end = c(2019,4), frequency = 4)
 
-# Split again into test and train set (10 years of prediction) ----
+# Split again into test and train set, with slightly adjusted start date to account for differencing reduction of the data ----
 ts.train <- window(tse,
                    start = c(1960,4),
                    end = c(2009,4),
@@ -166,6 +166,9 @@ ts.test <- window(tse,
                   end = c(2019,4),
                   frequency = 4)
 
+# We still observe stationarity in our series, but assume that the rest will be resolved employing the ARIMA machanics. 
+summary(ur.df(ts.train[,3], type = "none"))
+summary(ur.df(ts.train[,4], type = "none"))
 
 # LONG-TERM RELATIONSHIP ----
 
@@ -174,7 +177,7 @@ ts.test <- window(tse,
 # As already indicated above, just regressing both variables on each other might lead to spurious regressions, identifiable
 # by a high Adj. R-sqaured and high residual autocorrelation (Hyndman & Athanasopoulos, 2018). This occurence impacts the 
 # reliance of our forecast in the long-term horizon. Based on the previously conducted KPSS test, we already know that 
-# non-stationarity and possible cointegration of our series is an issue. These unit root tests already indicated that in
+# non-stationarity and possible cointegration of our series are an issue. These unit root tests already indicated that in
 # order to guarantuee that the characteristic equation lies within the unit circle (Hyndman & Athanasopoulos, 2018), we
 # must take the differences in order to assure stationarity.
 
@@ -182,9 +185,14 @@ fit.tse <- tslm(formula = ts.train[,1] ~ ts.train[,2])
 summary(fit.tse)
 summary(ur.df(residuals(fit.tse), type = "drift", lag = 1))
 
-# As we see, just incorporating the first-order differences into the regression does not resolve our non-stationarity 
-# issues in the regression setting. But it indicates, that both variables have a significant, cointegrated long-term
-# relationship which can be used to design our forecasts.
+fit.tse.adj <- tslm(formula = ts.train[,3] ~ ts.train[,4]) 
+summary(fit.tse.adj)
+summary(ur.df(residuals(fit.tse.adj), type = "drift", lag = 1))
+
+# As we see, from both analyses, incorporating our transformed series for consumption into the regression 
+# does not resolve our non-stationarity issues in the regression setting. But this indicates, 
+# that both variables have a significant, cointegrated long-term relationship which can be used to design our forecasts.
+# This also holds true if we apply the alternative values for tau2, being -3.43, -2.86, and -2.57.
 
 # 5. Identify ARIMA model for consumption ----
 
@@ -198,17 +206,15 @@ summary(ur.df(residuals(fit.tse), type = "drift", lag = 1))
 log(ts.train[,2]) %>% 
   diff(lag = 4) %>% 
   diff() %>% 
-  ggtsdisplay() # Figure XYZ
+  ggtsdisplay() # Figure 3
 
-# (2,1,3)(0,1,2)
-# (2,1,2)(1,1,1)
 # Based on the resulting assumptions, we conlude that an ARIMA(0,1,3)(0,1,2)[4] might be suitable, because of the significant
 # spikes seen in the PACF for lag 3 and 6, determining q = 3 and Q = 3. 
 
 (fit.1 <- Arima(ts.train[,2], order = c(0,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.1 <- ggAcf(fit.1$residuals) + ylab("") + ggtitle("ACF for ARIMA(0,1,3)(0,1,2)")
 ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,2)")
-ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # Appendix XYZ
+ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # Appendix 5
 
 # The subsequent check shows some autocorrelation left, visible in the ACF plot at spike 6. 
 # Because we already adjusted the MA(q) part, this must be a detail to be adjusted in the AR(p) part. 
@@ -217,21 +223,20 @@ ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # Appendix XYZ
 (fit.2 <- Arima(ts.train[,2], order = c(1,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.2 <- ggAcf(fit.2$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,3)(0,1,2)")
 ce.pacf.2 <- ggPacf(fit.2$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,3)(0,1,2)")
-ggarrange(ce.acf.2, ce.pacf.2, ncol = 2) # Appendix XYZ
+ggarrange(ce.acf.2, ce.pacf.2, ncol = 2) # Appendix 6
 
 (fit.3 <- Arima(ts.train[,2], order = c(2,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,3)(0,1,2)")
 ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,3)(0,1,2)")
-ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Appendix XYZ
+ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Figure 4
 
-checkresiduals(fit.1) # Appendix XYZ
-checkresiduals(fit.2) # Appendix XYZ
-checkresiduals(fit.3) # Figure XYZ
-autoplot(fit.3) # Figure XYZ
+checkresiduals(fit.1)$p.value # Appendix 7
+checkresiduals(fit.2) # Appendix 8
+checkresiduals(fit.3) # Figure 5
+autoplot(fit.3) # Figure 6
 
-
-# Comparing our models for ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,1)[4], we see that the latter has slightly
-# better ACF and PACF spike conditions. Also, the Ljung-Box test is supporting this assumptions as the autocorrelation 
+# Comparing our models for ARIMA(1,1,3)(0,1,2)[4] and ARIMA(2,1,3)(0,1,2)[4], we see that the latter has better 
+# ACF and PACF spike conditions. Also, the Ljung-Box test is supporting this assumptions as the autocorrelation 
 # in the ARIMA(1,1,3)(0,1,2)[4] and ARIMA(0,1,3)(0,1,2)[4] is still highly significant as opposed by the latter model.
 # The resulting series is now a white-noise series. The distribution of the residuals also fits the assumed distribution pattern.
 # Looking at the coefficients, we observe that ar1, ma1, and sma2 are not statistically significant, and ma3 being almost
@@ -241,17 +246,27 @@ autoplot(fit.3) # Figure XYZ
 (fit.4 <- Arima(ts.train[,2], order = c(2,1,2), seasonal = c(0,1,1), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.4 <- ggAcf(fit.4$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,2)(0,1,1)") + theme_minimal()
 ce.pacf.4 <- ggPacf(fit.4$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)(0,1,1)") + theme_minimal()
-ggarrange(ce.acf.4, ce.pacf.4, ncol = 2) # Appendix XYZ
+ggarrange(ce.acf.4, ce.pacf.4, ncol = 2) # Appendix 9
 
 # Because in our `fit4` model we still have some issues with autocorrelation we set P = 1 because of the trend 
-# that can still be observed in the residuals:
+# that can still be observed in the residuals. We end up with an ARIMA model that also surpasses all previous models
+# in terms of coefficient significance, and AICc, AIC, and BIC. Also the Ljung-Box p-value is maximized, as seen in _Figures 7 to 9_:
 
 (fit.5 <- Arima(ts.train[,2], order = c(2,1,2), seasonal = c(1,1,1), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.5 <- ggAcf(fit.5$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,2)(1,1,1)") + theme_minimal()
 ce.pacf.5 <- ggPacf(fit.5$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)(1,1,1)") + theme_minimal()
-ggarrange(ce.acf.5, ce.pacf.5, ncol = 2) # Figure XYZ
+ggarrange(ce.acf.5, ce.pacf.5, ncol = 2) # Figure 7
+checkresiduals(fit.5) # Figure 8
+autoplot(fit.5) # Figure 9
 
-autoplot(fit.5) # Figure XYZ
+(arima.comp.1 <- data.frame(model=c("ARIMA(1,1,1)(0,1,2)", "ARIMA(1,1,3)(0,1,2)", "ARIMA(2,1,3)(0,1,2)", "ARIMA(2,1,2)(0,1,1)", "ARIMA(2,1,2)(1,1,1)"),
+                            LB.p.value = c(checkresiduals(fit.1)$p.value, checkresiduals(fit.2)$p.value, checkresiduals(fit.3)$p.value, checkresiduals(fit.4)$p.value, checkresiduals(fit.5)$p.value),
+                            aicc = c(fit.1$aicc, fit.2$aicc, fit.3$aicc, fit.4$aicc, fit.5$aicc),
+                            bic = c(fit.1$bic, fit.2$bic, fit.3$bic, fit.4$bic, fit.5$bic)) %>% 
+    mutate_if(is.numeric, round, digit = 3) %>% 
+    arrange(desc(LB.p.value), aicc)) # ordering by p.value and AICc
+    
+  
 # For detailed figures and graphs showing the other scenarios, please see the Appendix. 
 
 # Because KPSS can only be used to determine d and D, we need to employ Information Criteria, such as AICc, to 
@@ -261,25 +276,25 @@ autoplot(fit.5) # Figure XYZ
 # Also, the obtained ARIMA coefficients remain highly statistically singificant, aside of ma1. 
 
 (fit.arima <- auto.arima(ts.train[,2], lambda = BoxCox.lambda(ts.train[,2])))
-summary(fit.arima)
-checkresiduals(fit.arima)
+summary(fit.arima) # no print
+checkresiduals(fit.arima) # no print
 
 # 6. Comparison on ACF and PACF for CE ----
 
 # Comparing the ACF and PACF plots of the raw Final Consumption Expenditure and ARIMA data, we can observe the following:
 # 1) The autocorrelation in the residuals is resolved. This was important to resolve, as ARIMA assumes that historical 
-# patterns will not change during the forecast. 2) The issue of a high partial ACF spike at lag 1, indicating 
-# correlation between the error terms of consumption between different lags. This is important to resolve, because
+# patterns will not change during the forecast. 2) The issue of a high PACF spike at lag 1, indicating 
+# correlation between the error terms of consumption between different lags was resolved. This is important to resolve, because
 # ARIMA assumes uncorrelated future errors.
 
 ce.acf <- ggAcf(ts.train[,2]) + ylab("") + ggtitle("ACF for Final Consumption Exp. (in million AUD)")
 ce.pacf <- ggPacf(ts.train[,2]) + ylab("") + ggtitle("PACF for Final Consumption Exp. (in million AUD)")
 ggarrange(ce.acf, ce.pacf,
           ce.acf.5, ce.pacf.5, 
-          ncol = 2, nrow = 2) # Figure XYZ
+          ncol = 2, nrow = 2) # Figure 10
 
 # 7. Data Forecast ----
-# More observations towards increasing PI, why it is increasing and connectio to pdq and PDQ
+
 autoplot(forecast(fit.5, h =39), series = "Forecast") +
   autolayer(test[,2], series = "Actual") +
   ggtitle("Final Consumption Expenditure Prediction",
@@ -289,6 +304,7 @@ autoplot(forecast(fit.5, h =39), series = "Forecast") +
   scale_x_continuous(limits = c(1990,2020))
 
 # 8. Forecast with income as explanatory, and new ARIMA model ----
+
 # The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model 
 # (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's
 # why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model, that is already 
@@ -309,8 +325,8 @@ ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) +
   ylab("") + 
   ggtitle("PACF for Regression w/ ARIMA(0,1,0)(0,1,0)")
 
-ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2)
-checkresiduals(fit.arima.adv.1)
+ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2) # Figure XYZ
+checkresiduals(fit.arima.adv.1) # Appendix XYZ
 
 # Comparison of the ARIMA models ----
 (fit.arima.adv.2 <- Arima(ts.train[,2], 
@@ -327,8 +343,8 @@ ce.pacf.adv.2 <- ggPacf(fit.arima.adv.2$residuals) +
   ylab("") + 
   ggtitle("PACF for Regression w/ ARIMA(0,1,0)(1,1,1)")
 
-ggarrange(ce.acf.adv.2,ce.pacf.adv.2, ncol = 2)
-checkresiduals(fit.arima.adv.2)
+ggarrange(ce.acf.adv.2,ce.pacf.adv.2, ncol = 2) # Appendix XYZ 
+checkresiduals(fit.arima.adv.2) # Appendix XYZ
 
 # This try shows us significant ACF and PACF spikes for lags 2 and 3 as well as 6. We set p = q = 2, as in the previous model
 # to balance the ACF and PACF values against each other. This results in optimal models considering ACF/PACF and white-noise
@@ -352,15 +368,15 @@ ce.pacf.adv.3 <- ggPacf(fit.arima.adv.2$residuals) +
   ylab("") + 
   ggtitle("PACF for Regression w/ ARIMA(2,1,2)(1,1,1)")
 
-  ggarrange(ce.acf.adv.3,ce.pacf.adv.3, ncol = 2)
+ggarrange(ce.acf.adv.3,ce.pacf.adv.3, ncol = 2) # Figure XYZ
 
-checkresiduals(fit.arima.adv.3)
+checkresiduals(fit.arima.adv.3) # Figure XYZ
 
 cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regression"),
       "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.3, type = "innovation")) %>% 
   autoplot(facets = T) +
   ggtitle("Comparison of Forecast and ARIMA(2,1,2)(1,1,1) Errors",
-          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series")
+          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series") # Fig XYZ
 
 # This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, 
 # as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during 
@@ -370,8 +386,9 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regressio
 # conveyed in the regression residuals. But because this change yields in more autocorrelation, we refrain from doing so:
 
 # On the other side, the automated approach yields in a different model variation, that was already discussed above
-# but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It also yields
-# higher AICc. Meaning, it is a worse forecast model than our ARIMA(2,1,2)(1,1,1) model:
+# but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It yields a 
+# lower AICc and does not yield in autocorrelation reduction, even though the ARIMA errors are white noise based (_Figure XYZ_). 
+# In sum, the automated is a worse forecast model than our ARIMA(2,1,2)(1,1,1) model:
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.lambda(ts.train[,2])))
 
@@ -379,11 +396,18 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
       "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv, type = "innovation")) %>% 
   autoplot(facets = T) +
   ggtitle("Comparison of Forecast and ARIMA Errors",
-          subtitle = "ARIMA errors resemlbe a white noise series")
+          subtitle = "ARIMA errors resemble white noise series, while Regression errors contian trends and cycles") # Figure XYZ
 
-checkresiduals(fit.arima.adv, theme = theme_minimal())
+checkresiduals(fit.arima.adv, theme = theme_minimal()) # Appendix XYZ
 
-# Q: Should add some subtitles here, but do not know how rn.
+(arima.comp.2 <- data.frame(model=c("ARIMA(0,1,0)(0,1,0)", "ARIMA(0,1,0)(1,1,1)", "ARIMA(2,1,2)(1,1,1)", "ARIMA(1,1,1)(0,0,2)"),
+                            LB.p.value = c(checkresiduals(fit.arima.adv.1)$p.value, checkresiduals(fit.arima.adv.2)$p.value, checkresiduals(fit.arima.adv.3)$p.value, checkresiduals(fit.arima.adv)$p.value),
+                            aicc = c(fit.arima.adv.1$aicc, fit.arima.adv.2$aicc, fit.arima.adv.3$aicc, fit.arima.adv$aicc),
+                            bic = c(fit.arima.adv.1$bic, fit.arima.adv.2$bic, fit.arima.adv.3$bic, fit.arima.adv$bic)) %>% 
+    mutate_if(is.numeric, round, digit = 3) %>% 
+    arrange(desc(LB.p.value), aicc)) # ordering by p.value and AICc
+
+# Forecasting Comparison
 fcs.adv.3 <- forecast(fit.arima.adv.3, xreg = ts.test[,3])
 fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
 
