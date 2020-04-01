@@ -432,9 +432,10 @@ ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2)
 fcs.5 <- forecast(fit.5, h = 40)
 comb_dr <- (fcs.5[["mean"]]+fcs.adv.3[["mean"]])/2
 
-  c_1 <- autoplot(tse[,2]) +
+c_1 <- autoplot(tse[,2]) +
   autolayer(comb_dr, series = "Combination (AVG)")+
-  ggtitle("Consumption Prediction Comparison") +
+  ggtitle("Consumption Prediction Comparison", 
+          subtitle = "Based on averaging of Dynamic Regression and Manual ARIMA") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
   scale_x_continuous(limits = c(2000,2020))
@@ -456,7 +457,8 @@ comb_am <- (fcs.adv[["mean"]]+fcs.adv.3[["mean"]])/2
 
 c_2 <- autoplot(tse[,2]) +
   autolayer(comb_am, series = "Combination (AVG)")+
-  ggtitle("Consumption Prediction Comparison") +
+  ggtitle("Consumption Prediction Comparison", 
+          subtitle = "Based on averaging of AutoARIMA and Manual ARIMA") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
   scale_x_continuous(limits = c(2000,2020))
@@ -481,10 +483,11 @@ comb_tbats <- (fcs.adv.3[["mean"]]+TBATS[["mean"]])/2
 comb_ets <- (fcs.adv.3[["mean"]]+ETS[["mean"]])/2
 
 c_3 <- autoplot(tse[,2]) +
-  autolayer(fcs.adv.3, series = "Manual ARIMA", PI = F) +
-  autolayer(comb_tbats, series = "ARIMA + TBATS (AVG)")+
-  autolayer(comb_ets, series = "ARIMA + ETS (AVG)")+
-  ggtitle("Consumption Prediction Comparison") +
+  autolayer(fcs.adv.3, series = "Manual Dynamic Regression", PI = F) +
+  autolayer(comb_tbats, series = "M. Dynamic Reg. + TBATS (AVG)")+
+  autolayer(comb_ets, series = "M. Dynamic Reg. + ETS (AVG)")+
+  ggtitle("Consumption Prediction Comparison",
+          subtitle = "based on Manual ARIMA and ARIMA Combinations") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
   scale_x_continuous(limits = c(2000,2020))
@@ -512,7 +515,7 @@ accuracy(comb_ets_w, x = ts.test[,2])
 # Comparison with sole models
 c_1 +
   autolayer(fcs.5, series = "ARIMA(2,1,2)(1,1,1)[4]", PI = F) +
-  autolayer(fcs.adv.3, series = "Dynamic Regression", PI = F)
+  autolayer(fcs.adv.3, series = "Manual Dynamic Regression", PI = F)
 
 # Average vs. optimal values
 c_1 +
@@ -521,8 +524,8 @@ c_1 +
 # ARIMA Manual + ARIMA Auto ----
 # Comparison with sole models
 c_2 +
-  autolayer(fcs.adv, series = "Auto Model", PI = F)+
-  autolayer(fcs.adv.3, series = "Manual", PI = F)
+  autolayer(fcs.adv, series = "Auto Dynamic Regression", PI = F)+
+  autolayer(fcs.adv.3, series = "Manual Dynamic Regression", PI = F)
 
 # Average vs. optimal values
 c_2 +
@@ -536,13 +539,13 @@ c_3 +
 
 # Average vs. optimal values
 c_3 +
-  autolayer(comb_ets_w, series = "ETS + Dynamic Regression (WO)") +
-  autolayer(comb_tbats_w, series = "TBATS + Dynamic Regression (WO)")
+  autolayer(comb_ets_w, series = "ETS + M. Dynamic Regression (WO)") +
+  autolayer(comb_tbats_w, series = "TBATS + M. Dynamic Regression (WO)")
 
 autoplot(tse[,2]) +
-  autolayer(comb_ets, series = "Dynamic regression + ETS (AVG)")+
-  autolayer(comb_ets_w, series = "Dynamic regression + ETS (WO)")+
-  autolayer(fcs.adv.3, series = "Dynamic regression", PI = F)+
+  autolayer(comb_ets, series = "M. Dynamic regression + ETS (AVG)")+
+  autolayer(comb_ets_w, series = "M. Dynamic regression + ETS (WO)")+
+  autolayer(fcs.adv.3, series = "Manual Dynamic Regression", PI = F)+
   ggtitle("Consumption Prediction Comparison") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
@@ -587,6 +590,6 @@ ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
   scale_x_discrete(limits = rev(levels(all_comp$Model)))+
   geom_bar(stat='identity', aes(fill=row.names(all_comp)), width=.5)+
   theme(legend.position = "none")+
-  labs(subtitle="Accuracy comparison is based on RMSE for both combined and sole models", 
-       title= "Comparison of forecasts accuracy") + 
+  labs(subtitle="ETS and Weighted ETS + M. Dynamic Reg. perform the best followed by sole MDR", 
+       title= "Comparison of forecasts accuracy, based on RMSE for combined and sole models") + 
   coord_flip()
