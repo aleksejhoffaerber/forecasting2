@@ -166,10 +166,9 @@ ts.test <- window(tse,
                   end = c(2019,4),
                   frequency = 4)
 
-<<<<<<< HEAD
+
 # LONG-TERM RELATIONSHIP ----
-=======
->>>>>>> 86cff336c697dd93404629176aaad138481ec952
+
 # 4. Long-term relationship analysis ----
 
 # As already indicated above, just regressing both variables on each other might lead to spurious regressions, identifiable
