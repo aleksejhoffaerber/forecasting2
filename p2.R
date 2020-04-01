@@ -305,12 +305,12 @@ autoplot(forecast(fit.5, h =39), series = "Forecast") +
 
 # 8. Forecast with income as explanatory, and new ARIMA model ----
 
-# The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model 
+# The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model
 # (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's
-# why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model, that is already 
-# adjusted with d = D = 1, as we observed with the KPSS test before in order to guarantee non-stationarity of the data, 
-# we still observe significant ACF spikes for lag 1,3, and 4, suggesting a Q-value of 1. PACF spikes for lag 1,3, and 4 
-# also indicate that P = 1. 
+# why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model, that is already
+# adjusted with d = D = 1, as we observed with the KPSS test before in order to guarantee non-stationarity of the data,
+# we still observe significant ACF spikes for lag 1,3, and 4, suggesting a Q-value of 1. PACF spikes for lag 1,3, and 4
+# also indicate that P = 1.
 
 (fit.arima.adv.1 <- Arima(ts.train[,2], 
                           order = c(0,1,0), 
@@ -350,8 +350,8 @@ checkresiduals(fit.arima.adv.2) # Appendix XYZ
 # to balance the ACF and PACF values against each other. This results in optimal models considering ACF/PACF and white-noise
 # behaviour, residual distribution, heteroscedasticity, stationarity, and coefficient significance:
 
-# When looking at the coefficients, we observe that ma1 and xreg, are not significant, but we include the latter it 
-# because of the task. We do not delete ma1, as this would impact the significant ma2 coefficient and because of 
+# When looking at the coefficients, we observe that ma1 and xreg, are not significant, but we include the latter it
+# because of the task. We do not delete ma1, as this would impact the significant ma2 coefficient and because of
 # the needed transformation towards autocorrelation decrese.
 
 (fit.arima.adv.3 <- Arima(ts.train[,2], 
@@ -378,16 +378,16 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regressio
   ggtitle("Comparison of Forecast and ARIMA(2,1,2)(1,1,1) Errors",
           subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series") # Fig XYZ
 
-# This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, 
-# as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during 
+# This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics,
+# as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during
 # the financial crisis in 2007/08. Additionally, we could include a constant in order
 # to mimick the trend that is displayed in our regression residuals. For this, and because a drift cannot be included
 # if the order of difference > 2, we must set d = 0 and also q = 0, because this drift should explain the information
 # conveyed in the regression residuals. But because this change yields in more autocorrelation, we refrain from doing so:
 
 # On the other side, the automated approach yields in a different model variation, that was already discussed above
-# but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It yields a 
-# lower AICc and does not yield in autocorrelation reduction, even though the ARIMA errors are white noise based (_Figure XYZ_). 
+# but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It yields a
+# lower AICc and does not yield in autocorrelation reduction, even though the ARIMA errors are white noise based (_Figure XYZ_).
 # In sum, the automated is a worse forecast model than our ARIMA(2,1,2)(1,1,1) model:
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.lambda(ts.train[,2])))
@@ -398,7 +398,7 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
   ggtitle("Comparison of Forecast and ARIMA Errors",
           subtitle = "ARIMA errors resemble white noise series, while Regression errors contian trends and cycles") # Figure XYZ
 
-checkresiduals(fit.arima.adv, theme = theme_minimal()) # Appendix XYZ
+checkresiduals(fit.arima.adv) # Appendix XYZ
 
 (arima.comp.2 <- data.frame(model=c("ARIMA(0,1,0)(0,1,0)", "ARIMA(0,1,0)(1,1,1)", "ARIMA(2,1,2)(1,1,1)", "ARIMA(1,1,1)(0,0,2)"),
                             LB.p.value = c(checkresiduals(fit.arima.adv.1)$p.value, checkresiduals(fit.arima.adv.2)$p.value, checkresiduals(fit.arima.adv.3)$p.value, checkresiduals(fit.arima.adv)$p.value),
