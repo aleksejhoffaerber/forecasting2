@@ -147,7 +147,6 @@ diff(diff(log(tse[,2]),4),1) %>% ur.kpss() %>% summary()
 tse[,2] %>% log() %>% nsdiffs()
 tse[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
 
-<<<<<<< HEAD
 # we incorporate this into the data frame
 
 df$di.adj <- c(c(rep(NA,5), diff(diff(log(tse[,1]),4),1)))
@@ -169,9 +168,7 @@ ts.test <- window(tse,
 
 
 # LONG-TERM RELATIONSHIP ----
-=======
 # 4. Long-term relationship analysis ----
->>>>>>> 91ecbc9561d1656d48a8e2943e304d81335bc21b
 
 # As already indicated above, just regressing both variables on each other might lead to spurious regressions, identifiable
 # by a high Adj. R-sqaured and high residual autocorrelation (Hyndman & Athanasopoulos, 2018). This occurence impacts the 
@@ -392,7 +389,7 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
   ggtitle("Comparison of Forecast and ARIMA Errors",
           subtitle = "ARIMA errors resemlbe a white noise series")
 
-checkresiduals(fit.arima.adv)
+checkresiduals(fit.arima.adv, theme = theme_minimal())
 
 # Q: Should add some subtitles here, but do not know how rn.
 
