@@ -13,6 +13,7 @@ library(readr)
 library(skimr)
 library(urca)
 library(tsDyn)
+library(ForecastComb)
 
 theme_set(theme_minimal())
 # 1. Loading data ----
@@ -156,18 +157,19 @@ tse <- ts(df[,2:5], start = c(1959,3), end = c(2019,4), frequency = 4)
 
 # Split again into test and train set (10 years of prediction) ----
 ts.train <- window(tse,
-               start = c(1960,4),
-               end = c(2009,4),
-               frequency = 4)
+                   start = c(1960,4),
+                   end = c(2009,4),
+                   frequency = 4)
 
 ts.test <- window(tse, 
-              start = c(2010,1),
-              end = c(2019,4),
-              frequency = 4)
+                  start = c(2010,1),
+                  end = c(2019,4),
+                  frequency = 4)
 
-
-
+<<<<<<< HEAD
 # LONG-TERM RELATIONSHIP ----
+=======
+>>>>>>> 86cff336c697dd93404629176aaad138481ec952
 # 4. Long-term relationship analysis ----
 
 # As already indicated above, just regressing both variables on each other might lead to spurious regressions, identifiable
@@ -204,10 +206,9 @@ log(ts.train[,2]) %>%
 # Based on the resulting assumptions, we conlude that an ARIMA(0,1,3)(0,1,2)[4] might be suitable, because of the significant
 # spikes seen in the PACF for lag 3 and 6, determining q = 3 and Q = 3. 
 
-
 (fit.1 <- Arima(ts.train[,2], order = c(0,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
-ce.acf.1 <- ggAcf(fit.1$residuals) + ylab("") + ggtitle("ACF for ARIMA(0,1,3)(0,1,2)") + theme_minimal()
-ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,2)") + theme_minimal()
+ce.acf.1 <- ggAcf(fit.1$residuals) + ylab("") + ggtitle("ACF for ARIMA(0,1,3)(0,1,2)")
+ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,1)(0,1,2)")
 ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # Appendix XYZ
 
 # The subsequent check shows some autocorrelation left, visible in the ACF plot at spike 6. 
@@ -215,20 +216,22 @@ ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # Appendix XYZ
 # We therefore set p = 1 and 2 and compare their AICc, autocorrelation, stationaroty and white noise residuals.
 
 (fit.2 <- Arima(ts.train[,2], order = c(1,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
-ce.acf.2 <- ggAcf(fit.2$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,3)(0,1,2)") + theme_minimal()
-ce.pacf.2 <- ggPacf(fit.2$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,3)(0,1,2)") + theme_minimal()
+ce.acf.2 <- ggAcf(fit.2$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,3)(0,1,2)")
+ce.pacf.2 <- ggPacf(fit.2$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,3)(0,1,2)")
 ggarrange(ce.acf.2, ce.pacf.2, ncol = 2) # Appendix XYZ
 
 (fit.3 <- Arima(ts.train[,2], order = c(2,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
-ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,3)(0,1,2)") + theme_minimal()
-ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,3)(0,1,2)") + theme_minimal()
+ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,3)(0,1,2)")
+ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,3)(0,1,2)")
 ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Appendix XYZ
 
-checkresiduals(fit.1, theme = theme_minimal()) # Appendix XYZ
-checkresiduals(fit.2, theme = theme_minimal()) # Appendix XYZ
-checkresiduals(fit.3, theme = theme_minimal()) # Figure XYZ
+checkresiduals(fit.1) # Appendix XYZ
+checkresiduals(fit.2) # Appendix XYZ
+checkresiduals(fit.3) # Figure XYZ
+autoplot(fit.3) # Figure XYZ
 
-# Comparing our models for ARIMA(1,1,3)(0,1,2)[4] and ARIMA(2,1,3)(0,1,2)[4], we see that the latter has slightly
+
+# Comparing our models for ARIMA(1,1,1)(1,1,1)[4] and ARIMA(1,1,1)(0,1,1)[4], we see that the latter has slightly
 # better ACF and PACF spike conditions. Also, the Ljung-Box test is supporting this assumptions as the autocorrelation 
 # in the ARIMA(1,1,3)(0,1,2)[4] and ARIMA(0,1,3)(0,1,2)[4] is still highly significant as opposed by the latter model.
 # The resulting series is now a white-noise series. The distribution of the residuals also fits the assumed distribution pattern.
@@ -250,7 +253,6 @@ ce.pacf.5 <- ggPacf(fit.5$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)
 ggarrange(ce.acf.5, ce.pacf.5, ncol = 2) # Figure XYZ
 
 autoplot(fit.5) # Figure XYZ
-
 # For detailed figures and graphs showing the other scenarios, please see the Appendix. 
 
 # Because KPSS can only be used to determine d and D, we need to employ Information Criteria, such as AICc, to 
@@ -279,12 +281,8 @@ ggarrange(ce.acf, ce.pacf,
 
 # 7. Data Forecast ----
 # More observations towards increasing PI, why it is increasing and connectio to pdq and PDQ
-
-
-fit.5 %>% 
-  forecast(h = 39) %>% 
-  autoplot(., series = "Forecast") +
-  autolayer(ts.test[,2], series = "Actual") +
+autoplot(forecast(fit.5, h =39), series = "Forecast") +
+  autolayer(test[,2], series = "Actual") +
   ggtitle("Final Consumption Expenditure Prediction",
           subtitle = "Forecast fits actual data quite well, despite slight overestimation. PI increase due to included differences") +
   xlab("Year") +
@@ -292,9 +290,6 @@ fit.5 %>%
   scale_x_continuous(limits = c(1990,2020))
 
 # 8. Forecast with income as explanatory, and new ARIMA model ----
-# need for Breusch-Godfrey test?
-
-
 # The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model 
 # (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's
 # why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model, that is already 
@@ -307,6 +302,7 @@ fit.5 %>%
                           seasonal = c(0,1,0), 
                           xreg = ts.train[,3], 
                           lambda = BoxCox.lambda(ts.train[,2])))
+
 ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + 
   ylab("") + 
   ggtitle("ACF for Regression w/ ARIMA(0,1,0)(0,1,0)")
@@ -318,23 +314,22 @@ ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2)
 checkresiduals(fit.arima.adv.1)
 
 # Comparison of the ARIMA models ----
-
 (fit.arima.adv.2 <- Arima(ts.train[,2], 
                           order = c(0,1,0), 
                           seasonal = c(1,1,1), 
                           xreg = ts.train[,3], 
                           lambda = BoxCox.lambda(ts.train[,2])))
 
+
 ce.acf.adv.2 <- ggAcf(fit.arima.adv.2$residuals) + 
   ylab("") + 
   ggtitle("ACF for Regression w/ ARIMA(0,1,0)(1,1,1)")
 ce.pacf.adv.2 <- ggPacf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(0,1,0)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("PACF for Regression w/ ARIMA(0,1,0)(1,1,1)")
 
 ggarrange(ce.acf.adv.2,ce.pacf.adv.2, ncol = 2)
-checkresiduals(fit.arima.adv.2, theme = theme_minimal())
+checkresiduals(fit.arima.adv.2)
 
 # This try shows us significant ACF and PACF spikes for lags 2 and 3 as well as 6. We set p = q = 2, as in the previous model
 # to balance the ACF and PACF values against each other. This results in optimal models considering ACF/PACF and white-noise
@@ -349,24 +344,24 @@ checkresiduals(fit.arima.adv.2, theme = theme_minimal())
                           seasonal = c(1,1,1), 
                           xreg = ts.train[,3], 
                           lambda = BoxCox.lambda(ts.train[,2])))
+
 ce.acf.adv.3 <- ggAcf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(2,1,2)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("ACF for Regression w/ ARIMA(2,1,2)(1,1,1)")
+
 ce.pacf.adv.3 <- ggPacf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("PACF for Regression w/ ARIMA(2,1,2)(1,1,1)") + 
-  theme_minimal()
+  ggtitle("PACF for Regression w/ ARIMA(2,1,2)(1,1,1)")
 
-ggarrange(ce.acf.adv.3,ce.pacf.adv.3, ncol = 2)
-checkresiduals(fit.arima.adv.3, theme = theme_minimal())
+  ggarrange(ce.acf.adv.3,ce.pacf.adv.3, ncol = 2)
+
+checkresiduals(fit.arima.adv.3)
 
 cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regression"),
       "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.3, type = "innovation")) %>% 
   autoplot(facets = T) +
   ggtitle("Comparison of Forecast and ARIMA(2,1,2)(1,1,1) Errors",
-          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series") +
-  theme_minimal()
+          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series")
 
 # This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, 
 # as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during 
@@ -375,11 +370,9 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regressio
 # if the order of difference > 2, we must set d = 0 and also q = 0, because this drift should explain the information
 # conveyed in the regression residuals. But because this change yields in more autocorrelation, we refrain from doing so:
 
-
 # On the other side, the automated approach yields in a different model variation, that was already discussed above
 # but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It also yields
 # higher AICc. Meaning, it is a worse forecast model than our ARIMA(2,1,2)(1,1,1) model:
-
 
 (fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.lambda(ts.train[,2])))
 
@@ -392,10 +385,6 @@ cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv, type = "regression"
 checkresiduals(fit.arima.adv, theme = theme_minimal())
 
 # Q: Should add some subtitles here, but do not know how rn.
-
-# Comparing both, the automated and manual ARIMA models, it is clear that also in terms of test-set performance,
-# the manual model has the upper hand:
-
 fcs.adv.3 <- forecast(fit.arima.adv.3, xreg = ts.test[,3])
 fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
 
@@ -411,15 +400,170 @@ fcs.adv.plot <- autoplot(fcs.adv, series = "Fitted Consumption") +
   ylab("Consumption (in million AUD)") +
   scale_x_continuous(limits = c(1990,2020))
 
-ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2) # Figure XYZ
+ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2)
 
 
-# AVERAGE OF THE FORECASTS FORECAST
- # 9. Average of the forecasts forecast
-autoplot(forecast(fit.arima.adv, h = 39), series = "Forecast") +
-  autolayer(ts.test[,2], series = "Actual") +
-  ggtitle("Consumption Prediction based on Regression w/ ARIMA(1,0,0)(0,1,1) + Drift",
-          subtitle = "ARIMA based forecast fits the actual data quite well, Prediction Intervals increase due to included differences") +
+# 9. Consumption foreacsting with average forecast and optimal weights ----
+# Dynamic and ARIMA ----
+# Averaging: dynamic regression and ARIMA
+fcs.5 <- forecast(fit.5, h = 40)
+comb_dr <- (fcs.5[["mean"]]+fcs.adv.3[["mean"]])/2
+
+  c_1 <- autoplot(tse[,2]) +
+  autolayer(comb_dr, series = "Combination (AVG)")+
+  ggtitle("Consumption Prediction Comparison") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
-  scale_x_continuous(limits = c(1990,2020))
+  scale_x_continuous(limits = c(2000,2020))
+
+accuracy(fcs.5, x = ts.test[,2])
+accuracy(fcs.adv.3, x = ts.test[,2])
+accuracy(comb_dr, x = ts.test[,2])
+
+# Optimal weights: dynamic regression and ARIMA
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+fcs.5[["mean"]]))/(var(fcs.5[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+fcs.5[["mean"]]))
+rw <- 1-w
+
+comb_dr_w <- w*fcs.5[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_dr_w, x = ts.test[,2])
+
+# ARIMA and autoARIMA comparison ----
+# Averaging: Auto and Manual
+comb_am <- (fcs.adv[["mean"]]+fcs.adv.3[["mean"]])/2
+
+c_2 <- autoplot(tse[,2]) +
+  autolayer(comb_am, series = "Combination (AVG)")+
+  ggtitle("Consumption Prediction Comparison") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(2000,2020))
+
+
+accuracy(fcs.adv, x = ts.test[,2])
+accuracy(fcs.adv.3, x = ts.test[,2])
+accuracy(comb_am, x = ts.test[,2])
+
+# Optimal weights: Auto and Manual
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+fcs.adv[["mean"]]))/(var(fcs.adv[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+fcs.adv[["mean"]]))
+rw <- 1-w
+
+comb_am_w <- w*fcs.adv[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_am_w, x = ts.test[,2])
+
+# With ETS and TBATS ----
+# Averaging: ETS, TBATS
+ETS <- forecast(ets(ts.train[,2]), h = 40)
+TBATS <- forecast(tbats(ts.train[,2], biasadj = T), h = 40)
+comb_tbats <- (fcs.adv.3[["mean"]]+TBATS[["mean"]])/2
+comb_ets <- (fcs.adv.3[["mean"]]+ETS[["mean"]])/2
+
+c_3 <- autoplot(tse[,2]) +
+  autolayer(fcs.adv.3, series = "Manual ARIMA", PI = F) +
+  autolayer(comb_tbats, series = "ARIMA + TBATS (AVG)")+
+  autolayer(comb_ets, series = "ARIMA + ETS (AVG)")+
+  ggtitle("Consumption Prediction Comparison") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(2000,2020))
+
+accuracy(comb_ets, x = ts.test[,2])
+accuracy(comb_tbats, x = ts.test[,2])
+
+# Optimal weights: ETS, TBATS
+# For TBATS
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+TBATS[["mean"]]))/(var(TBATS[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+TBATS[["mean"]]))
+rw <- 1-w
+
+comb_tbats_w <- w*TBATS[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_tbats_w, x = ts.test[,2])
+
+# For ETS
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+ETS[["mean"]]))/(var(ETS[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+ETS[["mean"]]))
+rw <- 1-w
+
+comb_ets_w <- w*ETS[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_ets_w, x = ts.test[,2])
+
+# 10. Make plot with data and forecasts ----
+# ARIMA + Dynamic ARIMA ----
+# Comparison with sole models
+c_1 +
+  autolayer(fcs.5, series = "ARIMA(2,1,2)(1,1,1)[4]", PI = F) +
+  autolayer(fcs.adv.3, series = "Dynamic Regression", PI = F)
+
+# Average vs. optimal values
+c_1 +
+  autolayer(comb_dr_w, series = "Combination (OW)")
+  
+# ARIMA Manual + ARIMA Auto ----
+# Comparison with sole models
+c_2 +
+  autolayer(fcs.adv, series = "Auto Model", PI = F)+
+  autolayer(fcs.adv.3, series = "Manual", PI = F)
+
+# Average vs. optimal values
+c_2 +
+  autolayer(comb_am_w, series = "Combination (OW)")
+
+# ARIMA+ETS and ARIMA+TBATS ----
+# Comparison with sole models
+c_3 +
+  autolayer(ETS, series = "ETS", PI = F)+
+  autolayer(TBATS, series = "TBATS", PI = F)
+
+# Average vs. optimal values
+c_3 +
+  autolayer(comb_ets_w, series = "ETS + Dynamic Regression (WO)") +
+  autolayer(comb_tbats_w, series = "TBATS + Dynamic Regression (WO)")
+
+autoplot(tse[,2]) +
+  autolayer(comb_ets, series = "Dynamic regression + ETS (AVG)")+
+  autolayer(comb_ets_w, series = "Dynamic regression + ETS (WO)")+
+  autolayer(fcs.adv.3, series = "Dynamic regression", PI = F)+
+  ggtitle("Consumption Prediction Comparison") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(2000,2020))
+
+# 11. Forecast measures and comparison ----
+all_comp <- as.data.frame(matrix(data = c(accuracy(fcs.5, x = ts.test[,2])["Test set", c("ME", "RMSE", "MAE")],
+                            accuracy(fcs.adv, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(fcs.adv.3, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(ETS, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(TBATS, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_dr, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_dr_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_am, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_am_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_ets, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_ets_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_tbats, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_tbats_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")]),
+                   nrow = 13,
+                   ncol = 3,
+                   byrow = T,
+                   dimnames = list(c("ARIMA", 
+                                     "DR (auto)",
+                                     "DR (manual)",
+                                     "ETS", 
+                                     "TBATS",
+                                     "ARIMA + DR (AVG)",
+                                     "ARIMA + DR (WO)",
+                                     "DR (Auto + Manual) (AVG)",
+                                     "DR (Auto + Manual) (WO)",
+                                     "DR + ETS (AVG)",
+                                     "DR + ETS (WO)",
+                                     "DR + TBATS (AVG)",
+                                     "DR + TBATS (WO)"), 
+                                   c("ME", "RMSE", "MAE"))))
+
+all_comp <- all_comp[order(all_comp$RMSE),]
+all_comp$Model <- factor(row.names(all_comp), levels = row.names(all_comp)) 
+
+ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
+  scale_x_discrete(limits = rev(levels(all_comp$Model)))+
+  geom_bar(stat='identity', aes(fill=row.names(all_comp)), width=.5)+
+  theme(legend.position = "none")+
+  labs(subtitle="Accuracy comparison is based on RMSE for both combined and sole models", 
+       title= "Comparison of forecasts accuracy") + 
+  coord_flip()
