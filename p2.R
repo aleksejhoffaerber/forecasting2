@@ -340,10 +340,10 @@ checkresiduals(fit.arima.adv.2)
                           seasonal = c(1,1,1), 
                           xreg = ts.train[,3], 
                           lambda = BoxCox.lambda(ts.train[,2])))
+
 ce.acf.adv.3 <- ggAcf(fit.arima.adv.2$residuals) + 
   ylab("") + 
-  ggtitle("ACF for Regression w/ ARIMA(2,1,2)(1,1,1)") + 
-  ggarrange(ce.acf.adv.3, ce.pacf.adv.3)
+  ggtitle("ACF for Regression w/ ARIMA(2,1,2)(1,1,1)")
 
 ce.pacf.adv.3 <- ggPacf(fit.arima.adv.2$residuals) + 
   ylab("") + 
@@ -396,43 +396,39 @@ fcs.adv.plot <- autoplot(fcs.adv, series = "Fitted Consumption") +
   ylab("Consumption (in million AUD)") +
   scale_x_continuous(limits = c(1990,2020))
 
-ggarrange(fcs.adv.5.plot, fcs.adv.plot, nrow = 2)
+ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2)
 
 
 # 9. Consumption foreacsting with average forecast and optimal weights ----
-# Averaging models with and witohout explanatory variables ----
-fcs.3 <- forecast(fit.3, h = 40)
-comb <- (fcs.3[["mean"]]+fcs.adv.5[["mean"]])/2
+# Dynamic and ARIMA ----
+# Averaging: dynamic regression and ARIMA
+fcs.5 <- forecast(fit.5, h = 40)
+comb_dr <- (fcs.5[["mean"]]+fcs.adv.3[["mean"]])/2
 
   c_1 <- autoplot(tse[,2]) +
-  autolayer(fcs.3, series = "Without explanatory variable", PI = F)+
-  autolayer(fcs.adv.5, series = "With explanatory variable", PI = F) +
-  autolayer(comb, series = "Combination")+
+  autolayer(comb_dr, series = "Combination (AVG)")+
   ggtitle("Consumption Prediction Comparison") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
   scale_x_continuous(limits = c(2000,2020))
 
+accuracy(fcs.5, x = ts.test[,2])
+accuracy(fcs.adv.3, x = ts.test[,2])
+accuracy(comb_dr, x = ts.test[,2])
 
-accuracy(fcs.3, x = ts.test[,2])
-accuracy(fcs.adv.5, x = ts.test[,2])
-accuracy(comb, x = ts.test[,2])
-
-# With the weighted parameters
-w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+fcs.3[["mean"]]))/(var(fcs.3[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+fcs.3[["mean"]]))
+# Optimal weights: dynamic regression and ARIMA
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+fcs.5[["mean"]]))/(var(fcs.5[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+fcs.5[["mean"]]))
 rw <- 1-w
 
-comb <- rw*fcs.3[["mean"]]+w*fcs.adv.5[["mean"]]
-accuracy(comb, x = ts.test[,2])
+comb_dr_w <- w*fcs.5[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_dr_w, x = ts.test[,2])
 
 # ARIMA and autoARIMA comparison ----
-# Averaged
-comb <- (fcs.adv[["mean"]]+fcs.adv.5[["mean"]])/2
+# Averaging: Auto and Manual
+comb_am <- (fcs.adv[["mean"]]+fcs.adv.3[["mean"]])/2
 
 c_2 <- autoplot(tse[,2]) +
-  autolayer(fcs.adv, series = "Auto Model", PI = F)+
-  autolayer(fcs.adv.5, series = "Manual", PI = F) +
-  autolayer(comb, series = "Combination")+
+  autolayer(comb_am, series = "Combination (AVG)")+
   ggtitle("Consumption Prediction Comparison") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
@@ -440,55 +436,130 @@ c_2 <- autoplot(tse[,2]) +
 
 
 accuracy(fcs.adv, x = ts.test[,2])
-accuracy(fcs.adv.5, x = ts.test[,2])
-accuracy(comb, x = ts.test[,2])
+accuracy(fcs.adv.3, x = ts.test[,2])
+accuracy(comb_am, x = ts.test[,2])
 
-# With the weighted parameters
-w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+fcs.adv[["mean"]]))/(var(fcs.adv[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+fcs.adv[["mean"]]))
+# Optimal weights: Auto and Manual
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+fcs.adv[["mean"]]))/(var(fcs.adv[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+fcs.adv[["mean"]]))
 rw <- 1-w
 
-comb <- rw*fcs.adv[["mean"]]+w*fcs.adv.5[["mean"]]
-accuracy(comb, x = ts.test[,2])
+comb_am_w <- w*fcs.adv[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_am_w, x = ts.test[,2])
 
 # With ETS and TBATS ----
-# Averaging
+# Averaging: ETS, TBATS
 ETS <- forecast(ets(ts.train[,2]), h = 40)
 TBATS <- forecast(tbats(ts.train[,2], biasadj = T), h = 40)
-comb1 <- (fcs.adv.5[["mean"]]+TBATS[["mean"]])/2
-comb2 <- (fcs.adv.5[["mean"]]+ETS[["mean"]])/2
+comb_tbats <- (fcs.adv.3[["mean"]]+TBATS[["mean"]])/2
+comb_ets <- (fcs.adv.3[["mean"]]+ETS[["mean"]])/2
 
 c_3 <- autoplot(tse[,2]) +
-  autolayer(ETS, series = "ETS", PI = F)+
-  autolayer(TBATS, series = "TBATS", PI = F) +
-  autolayer(fcs.adv.5, series = "Manual ARIMA", PI = F) +
-  autolayer(comb1, series = "ARIMA + TBATS")+
-  autolayer(comb1, series = "ARIMA + ETS")+
+  autolayer(fcs.adv.3, series = "Manual ARIMA", PI = F) +
+  autolayer(comb_tbats, series = "ARIMA + TBATS (AVG)")+
+  autolayer(comb_ets, series = "ARIMA + ETS (AVG)")+
   ggtitle("Consumption Prediction Comparison") +
   xlab("Year") +
   ylab("Consumption Exp. (in million AUD)") +
   scale_x_continuous(limits = c(2000,2020))
 
-# With weighted parameters
+accuracy(comb_ets, x = ts.test[,2])
+accuracy(comb_tbats, x = ts.test[,2])
+
+# Optimal weights: ETS, TBATS
 # For TBATS
-w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+TBATS[["mean"]]))/(var(TBATS[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+TBATS[["mean"]]))
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+TBATS[["mean"]]))/(var(TBATS[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+TBATS[["mean"]]))
 rw <- 1-w
-comb1 <- rw*TBATS[["mean"]]+w*fcs.adv.5[["mean"]]
-accuracy(comb, x = ts.test[,2])
+
+comb_tbats_w <- w*TBATS[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_tbats_w, x = ts.test[,2])
 
 # For ETS
-w <- (var(fcs.adv.5[["mean"]]) - sd(fcs.adv.5[["mean"]]+ETS[["mean"]]))/(var(ETS[["mean"]])+var(fcs.adv.5[["mean"]])-2*sd(fcs.adv.5[["mean"]]+ETS[["mean"]]))
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+ETS[["mean"]]))/(var(ETS[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+ETS[["mean"]]))
 rw <- 1-w
-comb2 <- rw*ETS[["mean"]]+w*fcs.adv.5[["mean"]]
-accuracy(comb2, x = ts.test[,2])
+
+comb_ets_w <- w*ETS[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_ets_w, x = ts.test[,2])
 
 # 10. Make plot with data and forecasts ----
-# ARIMA + Dynamic ARIMA
-c_1
+# ARIMA + Dynamic ARIMA ----
+# Comparison with sole models
+c_1 +
+  autolayer(fcs.5, series = "ARIMA(2,1,2)(1,1,1)[4]", PI = F) +
+  autolayer(fcs.adv.3, series = "Dynamic Regression", PI = F)
 
-# ARIMA Manual + ARIMA Auto
-c_2
+# Average vs. optimal values
+c_1 +
+  autolayer(comb_dr_w, series = "Combination (OW)")
+  
+# ARIMA Manual + ARIMA Auto ----
+# Comparison with sole models
+c_2 +
+  autolayer(fcs.adv, series = "Auto Model", PI = F)+
+  autolayer(fcs.adv.3, series = "Manual", PI = F)
 
-# ARIMA+ETS and ARIMA+TBATS
-c_3
+# Average vs. optimal values
+c_2 +
+  autolayer(comb_am_w, series = "Combination (OW)")
+
+# ARIMA+ETS and ARIMA+TBATS ----
+# Comparison with sole models
+c_3 +
+  autolayer(ETS, series = "ETS", PI = F)+
+  autolayer(TBATS, series = "TBATS", PI = F)
+
+# Average vs. optimal values
+c_3 +
+  autolayer(comb_ets_w, series = "ETS + Dynamic Regression (WO)") +
+  autolayer(comb_tbats_w, series = "TBATS + Dynamic Regression (WO)")
+
+autoplot(tse[,2]) +
+  autolayer(comb_ets, series = "Dynamic regression + ETS (AVG)")+
+  autolayer(comb_ets_w, series = "Dynamic regression + ETS (WO)")+
+  autolayer(fcs.adv.3, series = "Dynamic regression", PI = F)+
+  ggtitle("Consumption Prediction Comparison") +
+  xlab("Year") +
+  ylab("Consumption Exp. (in million AUD)") +
+  scale_x_continuous(limits = c(2000,2020))
 
 # 11. Forecast measures and comparison ----
+all_comp <- as.data.frame(matrix(data = c(accuracy(fcs.5, x = ts.test[,2])["Test set", c("ME", "RMSE", "MAE")],
+                            accuracy(fcs.adv, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(fcs.adv.3, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(ETS, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(TBATS, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_dr, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_dr_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_am, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_am_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_ets, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_ets_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_tbats, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_tbats_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")]),
+                   nrow = 13,
+                   ncol = 3,
+                   byrow = T,
+                   dimnames = list(c("ARIMA", 
+                                     "DR (auto)",
+                                     "DR (manual)",
+                                     "ETS", 
+                                     "TBATS",
+                                     "ARIMA + DR (AVG)",
+                                     "ARIMA + DR (WO)",
+                                     "DR (Auto + Manual) (AVG)",
+                                     "DR (Auto + Manual) (WO)",
+                                     "DR + ETS (AVG)",
+                                     "DR + ETS (WO)",
+                                     "DR + TBATS (AVG)",
+                                     "DR + TBATS (WO)"), 
+                                   c("ME", "RMSE", "MAE"))))
+
+all_comp <- all_comp[order(all_comp$RMSE),]
+all_comp$Model <- factor(row.names(all_comp), levels = row.names(all_comp)) 
+
+ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
+  scale_x_discrete(limits = rev(levels(all_comp$Model)))+
+  geom_bar(stat='identity', aes(fill=row.names(all_comp)), width=.5)+
+  theme(legend.position = "none")+
+  labs(subtitle="Accuracy comparison is based on RMSE for both combined and sole models", 
+       title= "Comparison of forecasts accuracy") + 
+  coord_flip()
