@@ -6,7 +6,8 @@ output:
   pdf_document:
     df_print: paged
     toc: yes
-    toc_depth: 3
+    toc_depth: 3 
+    df_print: kable
   html_document:
     df_print: paged
     toc: yes
@@ -259,8 +260,7 @@ arima.comp.1 <- data.frame(model=c("ARIMA(1,1,1)(0,1,2)",
 ```
 
 ```{r ARIMA model comparison data frame, message=FALSE, warning=FALSE}
-arima.comp.1
-
+knitr::kable(arima.comp.1, booktabs = T)
 ```
 ### Automated ARIMA selection approach
 Because KPSS can only be used to determine `d` and `D`, we need to employ Information Criteria, such as AICc, to pick the correct `p`,`q`,`P`,`Q` values. This is already incorporated in the automated ARIMA model selection that calculates different ARIMA models and picks the best models based on those Informaiton Criteria. In fact, the same ARIMA(2,1,2)(1,1,1) is picked, based on the unit root space optimization to guarantee stationarity. 
@@ -514,7 +514,7 @@ all_comp <- as.data.frame(matrix(data = c(accuracy(fcs.5, x = ts.test[,2])["Test
                                      "Optimal weights: DR + TBATS"), 
                                    c("ME", "RMSE", "MAE"))))
 
-all_comp
+knitr::kable(all_comp)
 ```
 
 As for the first combination case, where the ARIMA model is combined with the same model with regression, we can observe that the RMSE for the sole models is comparably close. So, in fact, there is no direct need to combine the forecasts, as the performance of the combined models and sole models will differ just slightly. 
@@ -608,7 +608,7 @@ From _Figure ###_ above, we can see that TBATS model and ARIMA with regression a
 
 The results of the combined models can be found in the lower part of the _Figure ###_. High performance of the forecast combination can be observed: a combination of the ARIMA with ETS has the best results among all models. Applying the use of the optimal weights, allows us to enhance the model even further, producing the overall RMSE of 4098.904. TBATS model forecast combination with ARIMA is weaker, due to the aforementioned estimation characteristics of TBATS. In the _Figure ##_ below, we can see that overall TBATS model, as with many automated modelling frameworks, performs rather poorly with just a slighter better estimation, than autoARIMA.
 
-```{r Figure  Measurements comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap="Forecast Accuracy Comparison"}
+```{r Figure Measurements comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap="Forecast Accuracy Comparison"}
 all_comp <- all_comp[order(all_comp$RMSE),]
 all_comp$Model <- factor(row.names(all_comp), levels = row.names(all_comp)) 
 
@@ -619,7 +619,7 @@ ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
   labs(subtitle="ETS and combinations with ETS perform the best followed by sole MDR", 
        title= "Comparison of forecasts accuracy, based on RMSE") + 
   coord_flip()+
-  labs(caption = "DR — Dynamic Regression (in our case: ARIMA(2,1,2)(1,1,1) with xreg") # fig 21
+  labs(caption = "DR - Dynamic Regression (in our case: ARIMA(2,1,2)(1,1,1) with xreg") # fig 21
 ```
 
 From _Figure ##_, we can see the overall comparison of all the models (combined and sole) performance based on the RMSE. Noticeably, the combination of two different best performing sole models (ARIMA with regression and ETS), provides us with the best results. In particularly this case, the poor performance of the automated modelling frameworks is visible with TBATS and autoARIMA having the biggest RMSE. In all the cases of forecasts combination, the advantage of the application of the optimal weights over averaging can be mentioned. 
