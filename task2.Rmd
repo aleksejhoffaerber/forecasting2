@@ -374,6 +374,18 @@ fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.l
 checkresiduals(fit.arima.adv) # fig 16
 
 ```
+```{r DR comparison, echo=FALSE, message=FALSE, warning=FALSE}
+arima.comp.2 <- data.frame(model=c("ARIMA(0,1,0)(0,1,0)", "ARIMA(0,1,0)(1,1,1)", "ARIMA(2,1,2)(1,1,1)", "ARIMA(1,1,1)(0,0,2)"),
+                            LB.p.value = c(checkresiduals(fit.arima.adv.1)$p.value, checkresiduals(fit.arima.adv.2)$p.value, checkresiduals(fit.arima.adv.3)$p.value, checkresiduals(fit.arima.adv)$p.value),
+                            aicc = c(fit.arima.adv.1$aicc, fit.arima.adv.2$aicc, fit.arima.adv.3$aicc, fit.arima.adv$aicc),
+                            bic = c(fit.arima.adv.1$bic, fit.arima.adv.2$bic, fit.arima.adv.3$bic, fit.arima.adv$bic)) %>% 
+    mutate_if(is.numeric, round, digit = 3) %>% 
+    arrange(desc(LB.p.value), aicc) # ordering by p.value and AICc
+```
+
+```{r DR plot comparison, echo=FALSE, message=FALSE, warning=FALSE}
+arima.comp.2
+```
 
 ```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Forecast Performance Comparison between Manual and Automated Approach"}
 # Forecasting Comparison
