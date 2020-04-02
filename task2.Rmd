@@ -114,7 +114,7 @@ summary(ur.kpss(tse[,1],use.lag = 4))
 summary(ur.df(tse[,1], type = "drift", lag = 4))
 ```
 
-# Autocorrelation and Residual Analysis
+## Autocorrelation and Residual Analysis
 Checking the residuals indicates that lots of autocorrelation remains in the residuals. In other words: valuable information that is currently not used to predict the data. This autocorrelation pattern is also typical for this type of economic data and time series. The significance of autocorrelation issue is very high, with the p-value being zero, as indicated by the Ljung-Box test in the _Appendix_. Additionally, strong trend cycles and seasonality, visible in the ACF and residual plots indicate that both series are non-stationary. Based on the distribution of the residuals we also see, that stabilisation of variance and mean are particularly important in order to design a suitable forecasting model based on the AR(I)MA process.
 
 ```{r Figure 2 residuals analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Residual Analysis of Disposable Income"}
@@ -621,6 +621,7 @@ ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
 ```
 
 From _Figure ##_, we can see the overall comparison of all the models (combined and sole) performance based on the RMSE. Noticeably, the combination of two different best performing sole models (ARIMA with regression and ETS), provides us with the best results. In particularly this case, the poor performance of the automated modelling frameworks is visible with TBATS and autoARIMA having the biggest RMSE. In all the cases of forecasts combination, the advantage of the application of the optimal weights over averaging can be mentioned. 
+\newpage
 
 ## Appendix
 ```{r Appendix 1 Stationarity Analysis, echo=FALSE, message=FALSE, warning=FALSE}
