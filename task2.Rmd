@@ -8,10 +8,6 @@ output:
     toc: yes
     toc_depth: 3 
     df_print: kable
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '3'
 ---
 
 \newpage
@@ -88,7 +84,7 @@ full.plot <- autoplot(tse[,1], color = "black", series = "Income") +
   scale_x_continuous(name = "Years",
                      limits = c(1960, 2020),
                      breaks = seq(1960, 2020, by = 10)) +
-  scale_y_continuous(name = "Income (in AUD mn.)",
+  scale_y_continuous(name = "Income in AUD mn.",
                      limits = c(0, 500000),
                      breaks = seq(0, 500000, by = 125000))
 
@@ -99,13 +95,15 @@ zoom.plot <- autoplot(tse[,1], color = "black", series = "Income") +
   scale_x_continuous(name = "Years",
                      limits = c(1990, 2020),
                      breaks = seq(1990, 2020, by = 10)) +
-  scale_y_continuous(name = "Consumption Exp. (in AUD mn.)",
+  scale_y_continuous(name = "Consumption AUD mn.",
                      breaks = seq(0, 500000, by = 125000))
 
 ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
 
 
 ```
+
+
 ### Stationarity Analysis 
 
 The KPSS tests null hypothessis is that the data is stationary (Hyndman & Athanasopoulos, 2018). Our test statistic is with `10.8` much bigger than the 1% critical level, meaning that the data is stationary, as p>0.01. The ADF test tests also for the presence of a unit root process in the time series, with the null hypothesis indicating the stationarity of the underlying time series. We use the `drift` characteristic because of the observed characteristics of the time series and in order to test for a variety of test scenarios (Enders, 2014). ADF indicates that we fail to reject our null hypothesis for `tau2` as p>0.05, meaning that gamma is unequal zero and therefore our data is non-stationary. But, we keep our the null hypothesis for `phi1` meaning that `alpha0` and `gamma` are equal to each other and to zero (Enders, 2014), meaning that we have a stationary series and a drift component. Same applies for an ADF test with trend. Despite rejecting the null hypothesis for `tau3`, saying that gamma is unequal to zero and therefore our data stataionary, `phi2` and `phi3` indicate to a significance level of 5% that we have a `drift` and `trend` component (see _Appendix_). Based on these characteristics adn the similarities in the time series, both time series are not stationary:
@@ -187,6 +185,7 @@ fit.tse.adj <- tslm(formula = ts.train[,"di.adj"] ~ ts.train[,"ce.adj"]) # white
 summary(fit.tse.adj)
 summary(ur.df(residuals(fit.tse.adj), type = "drift", lag = 1))
 ```
+
 ## Identify ARIMA model for consumption expenditure
 ### Manual ARIMA Selection approach
 Firstly, based on the previously determined time series characteristics, we know that we must employ a first-order lag differences for our autoregression (AR) part and a first-order seasonal component for our quarterly data, meaining that `d` and `D` are equal to one in order to reflect the observations and KPSS test from before. Secondly, we test for an optimal value for `p` and `q`, based on ACF and PACF test. Because we already know that we have high autocorrelation in our data. A spike in the ACF and PACF in Figure XYZ indicates that we have significant spikes for lag 1 in both charts (Hyndman & Athanasopoulos, 2018), meaning that we should set `p` = `q` = 1.
@@ -242,7 +241,7 @@ checkresiduals(fit.5) # Figure 8
 ```
 
 ```{r Figure 8 characterisitc roots, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Unit Root Theorem Analysis for ARIMA(2,1,1)(1,1,1)"}
-autoplot(fit.5) # Figure 8
+autoplot(fit.5) # Figure 8 # no cap
 ```
 For detailed figures and graphs showing the other scenarios, please see the _Appendix_. A comprehensive evaluation of ARIMA models can also be taken from this table:
 ```{r ARIMA model comparison, message=FALSE, warning=FALSE, include=FALSE, results=FALSE}
@@ -251,11 +250,13 @@ arima.comp.1 <- data.frame(model=c("ARIMA(1,1,1)(0,1,2)",
                                     "ARIMA(2,1,3)(0,1,2)", 
                                     "ARIMA(2,1,2)(0,1,1)", 
                                     "ARIMA(2,1,2)(1,1,1)"),
-                            LB.p.value = c(checkresiduals(fit.1)$p.value, checkresiduals(fit.2)$p.value, checkresiduals(fit.3)$p.value, checkresiduals(fit.4)$p.value, checkresiduals(fit.5)$p.value),
-                            aicc = c(fit.1$aicc, fit.2$aicc, fit.3$aicc, fit.4$aicc, fit.5$aicc),
-                            bic = c(fit.1$bic, fit.2$bic, fit.3$bic, fit.4$bic, fit.5$bic)) %>% 
-    mutate_if(is.numeric, round, digit = 3) %>% 
-    arrange(desc(LB.p.value), aicc) # ordering by p.value and AICc
+                            LB.p.value = c(checkresiduals(fit.1)$p.value, checkresiduals(fit.2)$p.value,
+                                           checkresiduals(fit.3)$p.value, checkresiduals(fit.4)$p.value,
+                                           checkresiduals(fit.5)$p.value),
+                           aicc = c(fit.1$aicc, fit.2$aicc, fit.3$aicc, fit.4$aicc, fit.5$aicc),
+                           bic = c(fit.1$bic, fit.2$bic, fit.3$bic, fit.4$bic, fit.5$bic)) %>% 
+  mutate_if(is.numeric, round, digit = 3) %>% 
+  arrange(desc(LB.p.value), aicc) # ordering by p.value and AICc
 
 ```
 
@@ -289,8 +290,8 @@ autoplot(forecast(fit.5, h =39), series = "Forecast") +
   ggtitle("Consumption Exp. Prediction, based on ARIMA without dynamic component",
           subtitle = "Forecast fits actual data quite well, despite slight overestimation") +
   xlab("Year") +
-  ylab("Consumption Exp. (in mn AUD)") +
-  scale_x_continuous(limits = c(1990,2020)) # Fig. 10
+  ylab("Consumption (in mn AUD)") +
+  scale_x_continuous(limits = c(1990,2020)) # Fig. 10 #no cap
 
 ```
 
@@ -359,12 +360,12 @@ checkresiduals(fit.arima.adv.3) # fig 13
 ```
 
 ```{r Figure 14 errors comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Error Comparison"}
-cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regression"),
-      "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.3, type = "innovation")) %>% 
+cbind("Reg Err." = residuals(fit.arima.adv.3, type = "regression"),
+      "ARIMA Err." = residuals(fit.arima.adv.3, type = "innovation")) %>% 
   autoplot(facets = T) +
   ggtitle("Comparison of DR + ARIMA(2,1,2)(1,1,1) Errors",
           subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series")
-# fig 14
+# fig 14 #no cap
 ```
 This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during the financial crisis in 2007/08. Additionally, we could include a constant in order to mimick the trend that is displayed in our regression residuals (see _Figure 14_). For this, and because a drift cannot be included if the order of difference > 2, we must set d = 0 and also q = 0, because this drift should explain the information conveyed in the regression residuals. But because this change yields in more autocorrelation, we refrain from doing so. 
 
@@ -376,20 +377,33 @@ fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.l
 checkresiduals(fit.arima.adv) # fig 16
 ```
 
-```{r DR comparison, echo=FALSE, message=FALSE, warning=FALSE}
-arima.comp.2 <- data.frame(model=c("ARIMA(0,1,0)(0,1,0)", "ARIMA(0,1,0)(1,1,1)", "ARIMA(2,1,2)(1,1,1)", "ARIMA(1,1,1)(0,0,2)"),
-                            LB.p.value = c(checkresiduals(fit.arima.adv.1)$p.value, checkresiduals(fit.arima.adv.2)$p.value, checkresiduals(fit.arima.adv.3)$p.value, checkresiduals(fit.arima.adv)$p.value),
-                            aicc = c(fit.arima.adv.1$aicc, fit.arima.adv.2$aicc, fit.arima.adv.3$aicc, fit.arima.adv$aicc),
-                            bic = c(fit.arima.adv.1$bic, fit.arima.adv.2$bic, fit.arima.adv.3$bic, fit.arima.adv$bic)) %>% 
-    mutate_if(is.numeric, round, digit = 3) %>% 
-    arrange(desc(LB.p.value), aicc) # ordering by p.value and AICc
+```{r DR model comparison, message=FALSE, warning=FALSE, include=FALSE, results=FALSE}
+arima.comp.2 <- data.frame(model=c("ARIMA(0,1,0)(0,1,0)", 
+                                   "ARIMA(0,1,0)(1,1,1)", 
+                                   "ARIMA(2,1,2)(1,1,1)", 
+                                   "ARIMA(1,1,1)(0,0,2)"),
+                           LB.p.value = c(checkresiduals(fit.arima.adv.1)$p.value, 
+                                          checkresiduals(fit.arima.adv.2)$p.value,
+                                          checkresiduals(fit.arima.adv.3)$p.value, 
+                                          checkresiduals(fit.arima.adv)$p.value),
+                           aicc = c(fit.arima.adv.1$aicc, 
+                                    fit.arima.adv.2$aicc, 
+                                    fit.arima.adv.3$aicc, 
+                                    fit.arima.adv$aicc),
+                           bic = c(fit.arima.adv.1$bic, 
+                                   fit.arima.adv.2$bic, 
+                                   fit.arima.adv.3$bic, 
+                                   fit.arima.adv$bic)) %>%
+  mutate_if(is.numeric, round, digit = 3) %>% 
+  arrange(desc(LB.p.value), aicc) # ordering by p.value and AICc
+
 ```
 
 ```{r DR plot comparison, echo=FALSE, message=FALSE, warning=FALSE}
 arima.comp.2
 ```
 
-```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Forecast Performance Comparison between Manual and Automated Approach"}
+```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap = "Forecast Performance Comparison between Manual and Automated Approach"}
 # Forecasting Comparison
 fcs.adv.3 <- forecast(fit.arima.adv.3, xreg = ts.test[,3])
 fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
@@ -635,20 +649,19 @@ Box.test(tse[,1], lag = 10, type = "Ljung-Box") # Appendix
 Box.test(tse[,2], lag = 10, type = "Ljung-Box") # Appendix 
 ```
 
-```{r Appendix 3 log residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Residual Analysis"}
+```{r Appendix 3 residual analysis CE, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for Income"}
+checkresiduals(tse[,2]) # Appendix 4
+```
+
+```{r Appendix 4 log residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Residual Analysis for First Differencing"}
 checkresiduals(log(tse[,1])) # Appendix 2
 ```
 
-```{r Appendix 4 second order diff-log analysis, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Appendix 5 second order diff-log analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for First-Order Seasonal Differencing"}
 checkresiduals(diff(diff(log(tse[,1]),4),1)) # Appendix 3
 ```
 
-```{r Appendix 5 residual analysis CE, echo=FALSE, message=FALSE, warning=FALSE}
-checkresiduals(tse[,2]) # Appendix 4
-Box.test(tse[,2], lag = 10, type = "Ljung-Box")
-```
-
-```{r Appendix 6 second order diff-log CE, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Appendix 6 second order diff-log CE, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for First-Order Seasonal Differencing for Consumption"}
 checkresiduals(diff(diff(log(tse[,2]),4),1)) # Appendix 5
 ```
 
