@@ -78,7 +78,7 @@ ts.test <- window (tse,
 ### Analysis of trend, seasons, and spurious regression issues
 As subject of study serves the Australian Consumption and Income data. Having a look at the time series, we see a high amount of correlation between both series that needs to be analysed using the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) Test, the Augmented Dickey-Fuller (ADF) Test, and corrected using differencing and other transformations. It can be observed that the seasonality and trend components are similar for both series, as seen in _Figure 1_. The distance between consumption and income increases with the later years, meaning that people in Australia earn more than they spend (see _Figure 1_). Also, spurious regression issues can be discarded as a potential issue, as disposable available income is impacts the consumption of the population because consumption depends on earnings and debt available.
 
-```{r Figure 1 Disposable Income Analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Correlation and Trend of Australian Consumption and Income Data"}
+```{r Figure 1 Disposable Income Analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "Correlation and Trend of Australian Consumption and Income Data"}
 # Analysis of the disposable income ----
 full.plot <- autoplot(tse[,1], color = "black", series = "Income") +
   autolayer(tse[,2], color = "darkblue", series = "Consumption") +
@@ -87,7 +87,7 @@ full.plot <- autoplot(tse[,1], color = "black", series = "Income") +
   scale_x_continuous(name = "Years",
                      limits = c(1960, 2020),
                      breaks = seq(1960, 2020, by = 10)) +
-  scale_y_continuous(name = "Disposable Income (in AUD millions)",
+  scale_y_continuous(name = "Income (in AUD mn.)",
                      limits = c(0, 500000),
                      breaks = seq(0, 500000, by = 125000))
 
@@ -98,7 +98,7 @@ zoom.plot <- autoplot(tse[,1], color = "black", series = "Income") +
   scale_x_continuous(name = "Years",
                      limits = c(1990, 2020),
                      breaks = seq(1990, 2020, by = 10)) +
-  scale_y_continuous(name = "Consumption Exp. (in AUD millions)",
+  scale_y_continuous(name = "Consumption Exp. (in AUD mn.)",
                      breaks = seq(0, 500000, by = 125000))
 
 ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
@@ -109,7 +109,7 @@ ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
 
 The KPSS tests null hypothessis is that the data is stationary (Hyndman & Athanasopoulos, 2018). Our test statistic is with `10.8` much bigger than the 1% critical level, meaning that the data is stationary, as p>0.01. The ADF test tests also for the presence of a unit root process in the time series, with the null hypothesis indicating the stationarity of the underlying time series. We use the `drift` characteristic because of the observed characteristics of the time series and in order to test for a variety of test scenarios (Enders, 2014). ADF indicates that we fail to reject our null hypothesis for `tau2` as p>0.05, meaning that gamma is unequal zero and therefore our data is non-stationary. But, we keep our the null hypothesis for `phi1` meaning that `alpha0` and `gamma` are equal to each other and to zero (Enders, 2014), meaning that we have a stationary series and a drift component. Same applies for an ADF test with trend. Despite rejecting the null hypothesis for `tau3`, saying that gamma is unequal to zero and therefore our data stataionary, `phi2` and `phi3` indicate to a significance level of 5% that we have a `drift` and `trend` component (see _Appendix_). Based on these characteristics adn the similarities in the time series, both time series are not stationary:
 
-```{r ADF with drift test, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Residual Analysis of Disposable Income"}
+```{r ADF with drift test, echo=FALSE, message=FALSE, warning=FALSE}
 summary(ur.kpss(tse[,1],use.lag = 4)) 
 summary(ur.df(tse[,1], type = "drift", lag = 4))
 ```
@@ -117,7 +117,7 @@ summary(ur.df(tse[,1], type = "drift", lag = 4))
 ## Autocorrelation and Residual Analysis
 Checking the residuals indicates that lots of autocorrelation remains in the residuals. In other words: valuable information that is currently not used to predict the data. This autocorrelation pattern is also typical for this type of economic data and time series. The significance of autocorrelation issue is very high, with the p-value being zero, as indicated by the Ljung-Box test in the _Appendix_. Additionally, strong trend cycles and seasonality, visible in the ACF and residual plots indicate that both series are non-stationary. Based on the distribution of the residuals we also see, that stabilisation of variance and mean are particularly important in order to design a suitable forecasting model based on the AR(I)MA process.
 
-```{r Figure 2 residuals analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Residual Analysis of Disposable Income"}
+```{r Figure 2 residuals analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Residual Analysis of Disposable Income"}
 checkresiduals(tse[,1]) # Figure 2
 ```
 
@@ -190,14 +190,14 @@ summary(ur.df(residuals(fit.tse.adj), type = "drift", lag = 1))
 ### Manual ARIMA Selection approach
 Firstly, based on the previously determined time series characteristics, we know that we must employ a first-order lag differences for our autoregression (AR) part and a first-order seasonal component for our quarterly data, meaining that `d` and `D` are equal to one in order to reflect the observations and KPSS test from before. Secondly, we test for an optimal value for `p` and `q`, based on ACF and PACF test. Because we already know that we have high autocorrelation in our data. A spike in the ACF and PACF in Figure XYZ indicates that we have significant spikes for lag 1 in both charts (Hyndman & Athanasopoulos, 2018), meaning that we should set `p` = `q` = 1.
 
-```{r Figure 3 log-diff, echo=FALSE, message=FALSE, warning=FALSE, fig.cap= "Residual Analysis for log-transformed and differenced consumption data"}
+```{r Figure 3 log-diff, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap= "Residual Analysis for log-transformed and differenced consumption data"}
 log(ts.train[,2]) %>% 
   diff(lag = 4) %>% 
   diff() %>% 
   ggtsdisplay() # Figure 3
 ```
 
-Based on the resulting assumptions, we conlude that an ARIMA(0,1,3)(0,1,2)[4] might be suitable, because of the significant spikes seen in the PACF for lag 3 and 6, determining `q` = 3 and `Q` = 3. The subsequent check shows some autocorrelation left, visible in the ACF plot at spike 6. Because we already adjusted the MA(q) part, this must be a detail to be adjusted in the AR(p) part. We therefore set `p` = 1 and 2 and compare their AICc, autocorrelation, stationarity, and white noise residuals.
+Based on the resulting assumptions, we conlude that an ARIMA(0,1,3)(0,1,2) might be suitable, because of the significant spikes seen in the PACF for lag 3 and 6, determining `q` = 3 and `Q` = 3. The subsequent check shows some autocorrelation left, visible in the ACF plot at spike 6. Because we already adjusted the MA(q) part, this must be a detail to be adjusted in the AR(p) part. We therefore set `p` = 1 and 2 and compare their AICc, autocorrelation, stationarity, and white noise residuals.
 
 ```{r Fit of the first models, echo=FALSE, message=FALSE, warning=FALSE}
 fit.1 <- Arima(ts.train[,2], order = c(0,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2]))
@@ -205,7 +205,8 @@ fit.2 <- Arima(ts.train[,2], order = c(1,1,3), seasonal = c(0,1,2), lambda = Box
 ```
 
 
-```{r Figure 4, echo=FALSE, message=FALSE, warning=FALSE, results = FALSE, fig.cap = "ACF and PACF Analysis for ARIMA (2,1,3)(0,1,2)[4] model"}
+
+```{r Figure 4 ARIMA (2,1,3)(0,1,2), echo=FALSE, message=FALSE, warning=FALSE, results = FALSE, fig.height=2, fig.width=8, fig.cap = "ACF and PACF Analysis for ARIMA (2,1,3)(0,1,2) model"}
 (fit.3 <- Arima(ts.train[,2], order = c(2,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,3)(0,1,2)")
 ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,3)(0,1,2)")
@@ -213,11 +214,11 @@ ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Figure 4
 
 ```
 
-```{r Figure 5 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for ARIMA (2,1,3)(0,1,2)[4] model"}
+```{r Figure 5 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for ARIMA (2,1,3)(0,1,2) model"}
 checkresiduals(fit.3) # Figure 5
 ```
 
-Comparing our models for ARIMA(1,1,3)(0,1,2)[4] (see _Appendix_) and ARIMA(2,1,3)(0,1,2)[4], we see that the latter has better ACF and PACF spike conditions, illustrated in _Figure 5_. Also, the Ljung-Box test is supporting this assumptions as the autocorrelation in the ARIMA(1,1,3)(0,1,2)[4] and ARIMA(0,1,3)(0,1,2)[4] is still highly significant as opposed by the latter model. The resulting series is now a white-noise series. The distribution of the residuals also fits the assumed distribution pattern. Looking at the coefficients, we observe that `ar1`, `ma1`, and `sma2` are not statistically significant, and `ma3` being almost not statistically significant. Because `ar1` should not be altered because of high significance of `ar2`, we try new model variants:
+Comparing our models for ARIMA(1,1,3)(0,1,2) (see _Appendix_) and ARIMA(2,1,3)(0,1,2), we see that the latter has better ACF and PACF spike conditions, illustrated in _Figure 5_. Also, the Ljung-Box test is supporting this assumptions as the autocorrelation in the ARIMA(1,1,3)(0,1,2) and ARIMA(0,1,3)(0,1,2) is still highly significant as opposed by the latter model. The resulting series is now a white-noise series. The distribution of the residuals also fits the assumed distribution pattern. Looking at the coefficients, we observe that `ar1`, `ma1`, and `sma2` are not statistically significant, and `ma3` being almost not statistically significant. Because `ar1` should not be altered because of high significance of `ar2`, we try new model variants:
 
 ```{r Modified fit 4, echo=FALSE, message=FALSE, warning=FALSE}
 (fit.4 <- Arima(ts.train[,2], order = c(2,1,2), seasonal = c(0,1,1), lambda = BoxCox.lambda(ts.train[,2])))
@@ -225,9 +226,9 @@ ce.acf.4 <- ggAcf(fit.4$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,2)(0,
 ce.pacf.4 <- ggPacf(fit.4$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)(0,1,1)") + theme_minimal()
 ```
 
-Because in our `fit4` model we still have some issues with autocorrelation we set `P` = 1 because of the trend that can still be observed in the residuals. We design and end up with an ARIMA(2,1,2)(1,1,1)[4] model that also surpasses all previous models in terms of coefficient significance, and AICc, AIC, and BIC. Also the Ljung-Box p-value is maximized, the residual distibution feed the ARIMA process requirements, and the unit root theorem is also satisfied, as seen in _Figures 6 to 8_:
+Because in our `fit4` model we still have some issues with autocorrelation we set `P` = 1 because of the trend that can still be observed in the residuals. We design and end up with an ARIMA(2,1,2)(1,1,1) model that also surpasses all previous models in terms of coefficient significance, and AICc, AIC, and BIC. Also the Ljung-Box p-value is maximized, the residual distibution feed the ARIMA process requirements, and the unit root theorem is also satisfied, as seen in _Figures 6 to 8_:
 
-```{r Figure 6 model, ACF and PACF, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "ACF and PACF Comparison of ARIMA(2,1,2)(0,1,1) and ARIMA(2,1,2)(1,1,1)"}
+```{r Figure 6 model, ACF and PACF, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "ACF and PACF Comparison of ARIMA(2,1,2)(0,1,1) and ARIMA(2,1,2)(1,1,1)"}
 (fit.5 <- Arima(ts.train[,2], order = c(2,1,2), seasonal = c(1,1,1), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.5 <- ggAcf(fit.5$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,2)(1,1,1)") + theme_minimal()
 ce.pacf.5 <- ggPacf(fit.5$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)(1,1,1)") + theme_minimal()
@@ -235,11 +236,11 @@ ggarrange(ce.acf.4, ce.pacf.4,
           ce.acf.5, ce.pacf.5, ncol = 2, nrow = 2) # Figure 6
 ```
 
-```{r Figure 7 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual and ACF Analysis for ARIMA(2,1,1)(1,1,1)[4]"}
+```{r Figure 7 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual and ACF Analysis for ARIMA(2,1,1)(1,1,1)"}
 checkresiduals(fit.5) # Figure 8
 ```
 
-```{r Figure 8 characterisitc roots, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Unit Root Theorem Analysis for ARIMA(2,1,1)(1,1,1)[4]"}
+```{r Figure 8 characterisitc roots, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Unit Root Theorem Analysis for ARIMA(2,1,1)(1,1,1)"}
 autoplot(fit.5) # Figure 8
 ```
 For detailed figures and graphs showing the other scenarios, please see the _Appendix_. A comprehensive evaluation of ARIMA models can also be taken from this table:
@@ -262,7 +263,7 @@ arima.comp.1
 
 ```
 ### Automated ARIMA selection approach
-Because KPSS can only be used to determine `d` and `D`, we need to employ Information Criteria, such as AICc, to pick the correct `p`,`q`,`P`,`Q` values. This is already incorporated in the automated ARIMA model selection that calculates different ARIMA models and picks the best models based on those Informaiton Criteria. In fact, the same ARIMA(2,1,2)(1,1,1)[4] is picked, based on the unit root space optimization to guarantee stationarity. 
+Because KPSS can only be used to determine `d` and `D`, we need to employ Information Criteria, such as AICc, to pick the correct `p`,`q`,`P`,`Q` values. This is already incorporated in the automated ARIMA model selection that calculates different ARIMA models and picks the best models based on those Informaiton Criteria. In fact, the same ARIMA(2,1,2)(1,1,1) is picked, based on the unit root space optimization to guarantee stationarity. 
 
 ```{r AutoARIMA, message=FALSE, warning=FALSE, include=FALSE, results = FALSE}
 (fit.arima <- auto.arima(ts.train[,2], lambda = BoxCox.lambda(ts.train[,2])))
@@ -272,7 +273,7 @@ checkresiduals(fit.arima) # no print
 
 ## Comparison of ACF and PACF for Capital Expenditure
 Comparing the ACF and PACF plots of the raw Final Consumption Expenditure and ARIMA data, we can observe the following: 1) The autocorrelation in the residuals is resolved. This was important to resolve, as ARIMA assumes that historical patterns will not change during the forecast. 2) The issue of a high PACF spike at lag 1, indicating correlation between the error terms of consumption between different lags was resolved. This is important to resolve, because ARIMA assumes uncorrelated future errors.
-```{r Figure 9 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "ACF and PACF comparisong between original data and ARIMA results"}
+```{r Figure 9 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "ACF and PACF comparisong between original data and ARIMA results"}
 ce.acf <- ggAcf(ts.train[,2]) + ylab("") + ggtitle("ACF for Consumption Exp.")
 ce.pacf <- ggPacf(ts.train[,2]) + ylab("") + ggtitle("PACF for Consumption Exp.")
 ggarrange(ce.acf, ce.pacf,
@@ -282,13 +283,13 @@ ggarrange(ce.acf, ce.pacf,
 
 ## Forecast test data set
 As can bee seen in _Figure 10_, the manual ARIMA model fits the data quite well, despite some minor overestimation. The prediction interval increases in size throughout time because of the included differences method.
-```{r ARIMA forecast, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Predicted Australian Consumption Expenditure based on ARIMA(2,1,2)(1,1,1)[4] model"}
+```{r ARIMA forecast, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Predicted Australian Consumption Expenditure based on ARIMA(2,1,2)(1,1,1) model"}
 autoplot(forecast(fit.5, h =39), series = "Forecast") +
   autolayer(ts.test[,2], series = "Actual") +
   ggtitle("Consumption Exp. Prediction, based on ARIMA without dynamic component",
           subtitle = "Forecast fits actual data quite well, despite slight overestimation") +
   xlab("Year") +
-  ylab("Consumption Exp. (in million AUD)") +
+  ylab("Consumption Exp. (in mn AUD)") +
   scale_x_continuous(limits = c(1990,2020)) # Fig. 10
 
 ```
@@ -297,7 +298,7 @@ autoplot(forecast(fit.5, h =39), series = "Forecast") +
 ### Manual Dynamic Regression Model Selection
 The inclusion of a new explanatory variable in the ARIMA model requires us to check the errors terms of the regression model (eta) and our ARIMA model (epsilon). In our case, our two variables for consumption and income are cointegrated. That's why we can rely on non-stationary time series (Hyndman & Athanasopoulos, 2018). In our first model, that is already adjusted with `d` = `D` = 1, as we observed with the KPSS test before in order to guarantee non-stationarity of the data, we still observe significant ACF spikes for lag 1,3, and 4, suggesting a `Q`-value of 1. PACF spikes for lag 1,3, and 4 also indicate that `P` = 1. Coefficients and AICc, and BIC values will be showed at the end.
 
-```{r Figure 11 first manual dynamic regression, echo=FALSE, message=FALSE, warning=FALSE, fig.cap= "ACF and PACF Analysis fpr ARIMA(0,1,0)(0,1,0)"}
+```{r First manual dynamic regression, echo=FALSE, message=FALSE, warning=FALSE}
 fit.arima.adv.1 <- Arima(ts.train[,2], 
                           order = c(0,1,0), 
                           seasonal = c(0,1,0), 
@@ -311,11 +312,9 @@ ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) +
   ylab("") + 
   ggtitle("PACF for DR + ARIMA(0,1,0)(0,1,0)")
 
-ggarrange(ce.acf.adv.1,ce.pacf.adv.1, ncol = 2) # Figure 11
-
 ```
 
-```{r Comparison of ARIMA DR, echo=FALSE, message=FALSE, warning=FALSE, fig.cap= "ACF and PACF Analysis fpr ARIMA(0,1,0)(1,1,1)"}
+```{r Comparison of ARIMA DR, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap= "ACF and PACF Analysis Comparison for  ARIMA(0,1,0)(0,1,0) and ARIMA(0,1,0)(1,1,1)"}
 # Comparison of the ARIMA models ----
 fit.arima.adv.2 <- Arima(ts.train[,2], 
                           order = c(0,1,0), 
@@ -330,12 +329,14 @@ ce.acf.adv.2 <- ggAcf(fit.arima.adv.2$residuals) +
 ce.pacf.adv.2 <- ggPacf(fit.arima.adv.2$residuals) + 
   ylab("") + 
   ggtitle("PACF for DR + ARIMA(0,1,0)(1,1,1)") 
-ggarrange(ce.acf.adv.2, ce.pacf.adv.2, ncol = 2) # fig 12
+
+ggarrange(ce.acf.adv.1,ce.pacf.adv.1,
+          ce.acf.adv.2, ce.pacf.adv.2, ncol = 2, nrow = 2) # fig 11
 ```
 
-This setting shows us significant ACF and PACF spikes for lags 2 and 3 as well as 6 (see _Figure 12_). We set `p` = `q` = 2, as in the previous model to balance the ACF and PACF values against each other. This results in optimal models considering ACF/PACF and white-noise behaviour, residual distribution, heteroscedasticity, stationarity, and coefficient significance (see _Figure 13_ and _Figure 14_). When looking at the coefficients, we observe that `ma1` and `xreg`, are not significant, but we include the latter it because of the task. We do not delete ma1, as this would impact the significant `ma2` coefficient and because of the needed transformation towards autocorrelation decrease.
+This setting shows us significant ACF and PACF spikes for lags 2 and 3 as well as 6 (see _Figure 11_). We set `p` = `q` = 2, as in the previous model to balance the ACF and PACF values against each other. This results in optimal models considering ACF/PACF and white-noise behaviour, residual distribution, heteroscedasticity, stationarity, and coefficient significance (see _Figure 12_ and _Figure 13_). When looking at the coefficients, we observe that `ma1` and `xreg`, are not significant, but we include the latter it because of the task. We do not delete ma1, as this would impact the significant `ma2` coefficient and because of the needed transformation towards autocorrelation decrease.
 
-```{r Figure 13 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "ACF and PACF Analysis for ARIMA(2,1,2)(1,1,1)"}
+```{r Figure 12 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=2, fig.width=8, fig.cap = "ACF and PACF Analysis for ARIMA(2,1,2)(1,1,1)"}
 (fit.arima.adv.3 <- Arima(ts.train[,2], 
                           order = c(2,1,2), 
                           seasonal = c(1,1,1), 
@@ -350,29 +351,29 @@ ce.pacf.adv.3 <- ggPacf(fit.arima.adv.3$residuals) +
   ylab("") + 
   ggtitle("PACF for DR + ARIMA(2,1,2)(1,1,1)")
 
-ggarrange(ce.acf.adv.3,ce.pacf.adv.3, ncol = 2) # fig 13
+ggarrange(ce.acf.adv.3,ce.pacf.adv.3, ncol = 2) # fig 12
 ```
 
-```{r Figure 14 residual analysis DR, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for ARIMA(2,1,2)(1,1,1)[4]"}
-checkresiduals(fit.arima.adv.3)
+```{r Figure 13 residual analysis DR, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for ARIMA(2,1,2)(1,1,1)"}
+checkresiduals(fit.arima.adv.3) # fig 13
 ```
 
-```{r Figure 14 errors comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Error Comparison"}
+```{r Figure 14 errors comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Error Comparison"}
 cbind("Regression Errors (eta_t)" = residuals(fit.arima.adv.3, type = "regression"),
       "ARIMA Errors (epsilon_t)" = residuals(fit.arima.adv.3, type = "innovation")) %>% 
   autoplot(facets = T) +
   ggtitle("Comparison of DR + ARIMA(2,1,2)(1,1,1) Errors",
           subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series")
-# fig 15
+# fig 14
 ```
-This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during the financial crisis in 2007/08. Additionally, we could include a constant in order to mimick the trend that is displayed in our regression residuals (see _Figure 15_). For this, and because a drift cannot be included if the order of difference > 2, we must set d = 0 and also q = 0, because this drift should explain the information conveyed in the regression residuals. But because this change yields in more autocorrelation, we refrain from doing so. 
+This reestimation yields in a suitable model, considering the white noise type of ARIMA residuals, ACF and PACF specifics, as well as a fitting residual distribution that is only slightly skewed because of the observation outliers during the financial crisis in 2007/08. Additionally, we could include a constant in order to mimick the trend that is displayed in our regression residuals (see _Figure 14_). For this, and because a drift cannot be included if the order of difference > 2, we must set d = 0 and also q = 0, because this drift should explain the information conveyed in the regression residuals. But because this change yields in more autocorrelation, we refrain from doing so. 
 
 ### Automated ARIMA model selection
-On the other side, the automated approach yields in a different model variation, that was already discussed above but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It yields a lower AICc and does not yield in autocorrelation reduction, even though the ARIMA errors are white noise based (see _Figure 16_). In sum, the automated is a worse forecast model than our ARIMA(2,1,2)(1,1,1) model, as can be seen in _Figure 17_.
-```{r Figure 15 errors comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis fpr Automated Selected ARIMA model"}
+On the other side, the automated approach yields in a different model variation, that was already discussed above but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It yields a lower AICc and does not yield in autocorrelation reduction, see _Figure 16_. In sum, the automated dynamic regression model is a worse forecast model than our ARIMA(2,1,2)(1,1,1) model, as can be seen in _Figure 15_.
+
+```{r Figure 15 errors comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis fpr Automated Selected ARIMA model"}
 fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.lambda(ts.train[,2]))
 checkresiduals(fit.arima.adv) # fig 16
-
 ```
 
 ```{r DR comparison, echo=FALSE, message=FALSE, warning=FALSE}
@@ -388,7 +389,7 @@ arima.comp.2 <- data.frame(model=c("ARIMA(0,1,0)(0,1,0)", "ARIMA(0,1,0)(1,1,1)",
 arima.comp.2
 ```
 
-```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Forecast Performance Comparison between Manual and Automated Approach"}
+```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Forecast Performance Comparison between Manual and Automated Approach"}
 # Forecasting Comparison
 fcs.adv.3 <- forecast(fit.arima.adv.3, xreg = ts.test[,3])
 fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
@@ -396,13 +397,13 @@ fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
 fcs.adv.3.plot <- autoplot(fcs.adv.3, series = "Fitted Consumption") +
   autolayer(ts.test[,2], series = "Actual Consumption") +
   xlab("Years") +
-  ylab("Consumption (in million AUD)") +
+  ylab("Consumption (in mn AUD)") +
   scale_x_continuous(limits = c(1990,2020))
 
 fcs.adv.plot <- autoplot(fcs.adv, series = "Fitted Consumption") +
   autolayer(ts.test[,2], series = "Actual Consumption") +
   xlab("Years") +
-  ylab("Consumption (in million AUD)") +
+  ylab("Consumption (in mn AUD)") +
   scale_x_continuous(limits = c(1990,2020))
 
 ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2) # fig 17
@@ -518,7 +519,7 @@ all_comp
 
 As for the first combination case, where the ARIMA model is combined with the same model with regression, we can observe that the RMSE for the sole models is comparably close. So, in fact, there is no direct need to combine the forecasts, as the performance of the combined models and sole models will differ just slightly. 
 
-```{r Figure ARIMA and DR plot, echo=FALSE, message=FALSE, warning=FALSE}
+```{r ARIMA and DR plot, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Forecast Combination for Dynamic Regressions using ARIMA"}
 # ARIMA + Dynamic ARIMA ----
 c_1 <- autoplot(tse[,2]) +
   autolayer(comb_dr, series = "Averaged forecast")+
@@ -526,23 +527,24 @@ c_1 <- autoplot(tse[,2]) +
   autolayer(fcs.adv.3, series = "ARIMA(2,1,2)(1,1,1) with xreg", PI = F) +
   autolayer(comb_dr_w, series = "Optimal weights combination")+
   ggtitle("Forecasts combination: ARIMA and dynamic regression", 
-          subtitle = "Comparison of the sole models and forecast combinations") +
+          subtitle = "Forecast are overlapping because of predominance of the DR + ARIMA(2,1,2)(1,1,1)") +
   scale_x_continuous(name = "Year",
                      limits = c(2000,2020),
                      breaks = seq(2000, 2020, by = 5)) +
-  scale_y_continuous(name = "Consumption Exp. (in million AUD)",
+  scale_y_continuous(name = "Consumption Exp. (in mn AUD)",
                      limits = c(0,400000),
                      breaks = seq(0, 400000, by = 75000))+
   scale_color_discrete(name = "Forecasting Models")
 
-c_1
+c_1 # fig 18
 ```
 
 From the _Figure ##_, we can see that all of the forecasting models performing almost the same, with just a slight advantage of the ARIMA(2,1,2)(1,1,1) with regression. This can be explained with the fact that both models are providing forecasts with estimations "above" the actual forecast and with a slight difference comparing to the models we will observe in the following two cases.
 
 For the second combination, we decided to combine `auto.arima` with regression and manually adjusted model with regression, used in the previous case. As we previously observed, the difference between both cases is observable with the measured RMSE of 19351.334 and 52235.143, for the manual and auto models correspondingly.
 
-```{r Figure Manual and autoARIMA plot, echo=FALSE, message=FALSE, warning=FALSE}
+
+```{r Manual and autoARIMA plot, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Forecast Combination for Dynamic Regressions and Automated Regression"}
 # ARIMA Manual + ARIMA Auto ----
 c_2 <- autoplot(tse[,2]) +
   autolayer(comb_am, series = "Averaged forecast")+
@@ -554,19 +556,19 @@ c_2 <- autoplot(tse[,2]) +
   scale_x_continuous(name = "Year",
                      limits = c(2000,2020),
                      breaks = seq(2000, 2020, by = 5)) +
-  scale_y_continuous(name = "Consumption Exp. (in million AUD)",
+  scale_y_continuous(name = "Consumption Exp. (in mn AUD)",
                      limits = c(0,400000),
                      breaks = seq(0, 400000, by = 75000))+
   scale_color_discrete(name = "Forecasting Models")
 
-c_2
+c_2 # fig 19
 ```
 
 From the _Figure ##_, presented above, we can observe the similar pattern as in the previous case: combination model with optimal weights performs slightly better than the averaged model, yet the sole manually adjusted model is still seen as the best performer due to both forecasts laying above the actual data of the test set.
 
 In the previous cases, we have looked into the combination of the different variations of the ARIMA models that we have estimated in the for the previous tasks. All of them share similar characteristics being above the test set in terms of forecast and primarily varying in the "closeness" to the actual data and capturing of the seasonality (especially visible in the last case). However, it is interesting to see the difference between the ARIMA models and other estimation approaches. For this case, we have made forecasting using TBATS and ETS models both separately combining with the best performing ARIMA model with regression.
 
-```{r Figure TBATS and ETS combination plot, fig.height=7, fig.width=9, message=FALSE, warning=FALSE, , echo=FALSE}
+```{r fig.height=6, message=FALSE, warning=FALSE, echo=FALSE, fig.height=6, fig.width=8, fig.cap="Forecast Comparison for ETS, TBATS approaches"}
 # ARIMA+ETS and ARIMA+TBATS ----
 c_3 <- autoplot(tse[,2]) +
   autolayer(fcs.adv.3, series = "ARIMA with regression", PI = F) +
@@ -577,7 +579,7 @@ c_3 <- autoplot(tse[,2]) +
   scale_x_continuous(name = "Year",
                      limits = c(2000,2020),
                      breaks = seq(2000, 2020, by = 5)) +
-  scale_y_continuous(name = "Consumption Exp. (in million AUD)",
+  scale_y_continuous(name = "Consumption Exp. (in mn AUD)",
                      limits = c(0,400000),
                      breaks = seq(0, 400000, by = 75000))+
   scale_color_discrete(name = "Forecasting Models")+ 
@@ -593,20 +595,20 @@ c_4 <- autoplot(tse[,2]) +
   scale_x_continuous(name = "Year",
                      limits = c(2000,2020),
                      breaks = seq(2000, 2020, by = 5)) +
-  scale_y_continuous(name = "Consumption Exp. (in million AUD)",
+  scale_y_continuous(name = "Consumption Exp. (in mn AUD)",
                      limits = c(0,400000),
                      breaks = seq(0, 400000, by = 75000))+
   scale_color_discrete(name = "Forecasting Models")+ 
   theme(legend.position="bottom")
 
-ggarrange(c_3, c_4, nrow = 2)
+ggarrange(c_3, c_4, nrow = 2) # fig 20
 ```
 
 From _Figure ###_ above, we can see that TBATS model and ARIMA with regression are very similar in its estimations, which is logical as far as TBATS is similar to the dynamic harmonic regression in many aspects, apart from seasonality. Different estimation characteristics are observed for the ETS (M,A,M): the model itself performs very well for based on the training set, and we can see that it captures data trend and seasonality quite well. Apart from that, ETS estimations are mapped slightly below the actual data, which should be very beneficial in the combination of two models.
 
 The results of the combined models can be found in the lower part of the _Figure ###_. High performance of the forecast combination can be observed: a combination of the ARIMA with ETS has the best results among all models. Applying the use of the optimal weights, allows us to enhance the model even further, producing the overall RMSE of 4098.904. TBATS model forecast combination with ARIMA is weaker, due to the aforementioned estimation characteristics of TBATS. In the _Figure ##_ below, we can see that overall TBATS model, as with many automated modelling frameworks, performs rather poorly with just a slighter better estimation, than autoARIMA.
 
-```{r Figure Measurements comparison, echo=FALSE, fig.width=8, message=FALSE, warning=FALSE}
+```{r Figure  Measurements comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap="Forecast Accuracy Comparison"}
 all_comp <- all_comp[order(all_comp$RMSE),]
 all_comp$Model <- factor(row.names(all_comp), levels = row.names(all_comp)) 
 
@@ -617,7 +619,7 @@ ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
   labs(subtitle="ETS and combinations with ETS perform the best followed by sole MDR", 
        title= "Comparison of forecasts accuracy, based on RMSE") + 
   coord_flip()+
-  labs(caption = "DR - Dynamic Regression (in our case: ARIMA(2,1,2)(1,1,1) with xreg")
+  labs(caption = "DR — Dynamic Regression (in our case: ARIMA(2,1,2)(1,1,1) with xreg") # fig 21
 ```
 
 From _Figure ##_, we can see the overall comparison of all the models (combined and sole) performance based on the RMSE. Noticeably, the combination of two different best performing sole models (ARIMA with regression and ETS), provides us with the best results. In particularly this case, the poor performance of the automated modelling frameworks is visible with TBATS and autoARIMA having the biggest RMSE. In all the cases of forecasts combination, the advantage of the application of the optimal weights over averaging can be mentioned. 
@@ -633,7 +635,7 @@ Box.test(tse[,1], lag = 10, type = "Ljung-Box") # Appendix
 Box.test(tse[,2], lag = 10, type = "Ljung-Box") # Appendix 
 ```
 
-```{r Appendix 3 log residual analysis, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Appendix 3 log residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Residual Analysis"}
 checkresiduals(log(tse[,1])) # Appendix 2
 ```
 
