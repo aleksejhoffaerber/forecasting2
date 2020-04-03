@@ -1,7 +1,7 @@
 ---
 title: "Project Task 2"
 author: "Aleksej Hoffaerber, Egor Zmaznev"
-date: "4/3/2020"
+date: "3/4/2020"
 output:
   pdf_document:
     toc: yes
@@ -112,7 +112,6 @@ ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
 
 
 ### Stationarity Analysis 
-
 The KPSS tests null hypothessis is that the data is stationary (Hyndman & Athanasopoulos, 2018). Our test statistic is with `10.8` much bigger than the 1% critical level, meaning that the data is stationary, as p>0.01. The ADF test tests also for the presence of a unit root process in the time series, with the null hypothesis indicating the stationarity of the underlying time series. We use the `drift` characteristic because of the observed characteristics of the time series and in order to test for a variety of test scenarios (Enders, 2014). ADF indicates that we fail to reject our null hypothesis for `tau2` as p>0.05, meaning that gamma is unequal zero and therefore our data is non-stationary. But, we keep our the null hypothesis for `phi1` meaning that `alpha0` and `gamma` are equal to each other and to zero (Enders, 2014), meaning that we have a stationary series and a drift component. Same applies for an ADF test with trend. Despite rejecting the null hypothesis for `tau3`, saying that gamma is unequal to zero and therefore our data stataionary, `phi2` and `phi3` indicate to a significance level of 5% that we have a `drift` and `trend` component (see _Appendix_). Based on these characteristics adn the similarities in the time series, both time series are not stationary:
 
 ```{r ADF with drift test, echo=FALSE, message=FALSE, warning=FALSE}
@@ -180,7 +179,7 @@ ts.test <- window(tse,
 ##  Long-term Relationship Analysis
 As already indicated above, just regressing both variables on each other might lead to spurious regressions, identifiable by a high Adj. R-sqaured and high residual autocorrelation (Hyndman & Athanasopoulos, 2018). This occurence impacts the reliance of our forecast in the long-term horizon. Based on the previously conducted KPSS test, we already know that non-stationarity and possible cointegration of our series are an issue. These unit root tests already indicated that in order to guarantuee that the characteristic equation lies within the unit circle (Hyndman & Athanasopoulos, 2018), we must take the differences in order to assure stationarity. 
 
-As we see, from the analyses, incorporating our transformed series for consumption into the regression does resolve our stationarity issues in the regression setting. This indicates, that both variables have a significant, cointegrated long-term relationship which can be used to design our forecasts. This also holds true if we apply the alternative values for `tau2`, being -3.43, -2.86, and -2.57 respectively.
+As we see, from the analyses, incorporating our transformed series for consumption into the regression does resolve our stationarity issues in the regression setting. This indicates, that both variables have a significant, cointegrated long-term relationship, which can be used to design our forecasts. This also holds true if we apply the alternative values for `tau2`, being -3.43, -2.86, and -2.57 respectively.
 
 ```{r TSLM with original data, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
 fit.tse <- tslm(formula = ts.train[,1] ~ ts.train[,2]) # not white-noise adjusted
@@ -298,14 +297,15 @@ ggarrange(ce.acf, ce.pacf,
 As can bee seen in _Figure 10_, the manual ARIMA model fits the data quite well, despite some minor overestimation. The prediction interval increases in size throughout time because of the included differences method.
 
 ```{r ARIMA forecast, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "Predicted Australian consumption Expenditure based on ARIMA(2,1,2)(1,1,1) model"}
-f10 <- autoplot(forecast(fit.5, h =39), series = "Forecast") +
+f10 <- autoplot(forecast(fit.5, h =40), series = "Forecast") +
   autolayer(ts.test[,2], series = "Actual") +
-  ggtitle("consumption Exp. Prediction, based on ARIMA without dynamic component",
+  ggtitle("Consumption Exp. Prediction, based on ARIMA without dynamic component",
           subtitle = "Forecast fits actual data quite well, despite slight overestimation") +
-  xlab("Year") +
-  ylab("consumption (in mn AUD)") +
-  scale_x_continuous(limits = c(1990,2020)) # Fig. 10 
-
+  scale_x_continuous(name = "Years",
+                     limits = c(1990,2020))+
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,630000),
+                     breaks = seq(0, 625000, by = 125000)) # Fig. 10 
 f10
 ```
 
@@ -428,19 +428,21 @@ fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
 
 fcs.adv.3.plot <- autoplot(fcs.adv.3, series = "Fitted consumption") +
   autolayer(ts.test[,2], series = "Actual consumption") +
-  xlab("Years") +
-  ylab("consumption (in mn AUD)") +
-  scale_x_continuous(limits = c(1990,2020))+ 
-  theme(legend.position="bottom")
+  scale_x_continuous(name = "Years",
+                     limits = c(1990,2020))+
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,630000),
+                     breaks = seq(0, 625000, by = 125000))
 
 fcs.adv.plot <- autoplot(fcs.adv, series = "Fitted consumption") +
   autolayer(ts.test[,2], series = "Actual consumption") +
-  xlab("Years") +
-  ylab("consumption (in mn AUD)") +
-  scale_x_continuous(limits = c(1990,2020))+ 
-  theme(legend.position="bottom")
+  scale_x_continuous(name = "Years",
+                     limits = c(1990,2020))+
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,625000),
+                     breaks = seq(0, 625000, by = 125000))
 
-ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2, common.legend = T) # fig 17
+ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2, common.legend = T, legend = "bottom") # fig 17
 ```
 
 ## Forecast Combination: Comparison, Plotting and Measurment
@@ -603,7 +605,7 @@ From the _Figure 18_, presented above, we can observe the similar pattern as in 
 
 In the previous cases, we have looked into the combination of the different variations of the ARIMA models that we have estimated in the for the previous tasks. All of them share similar characteristics being above the test set in terms of forecast and primarily varying in the "closeness" to the actual data and capturing of the seasonality (especially visible in the last case). However, it is interesting to see the difference between the ARIMA models and other estimation approaches. For this case, we have made forecasting using TBATS and ETS models both separately combining with the best performing ARIMA model with regression.
 
-```{r fig.height=6, message=FALSE, warning=FALSE, echo=FALSE, fig.height=6, fig.width=8, fig.cap="Forecast Comparison for ETS, TBATS approaches"}
+```{r fig.height=6, message=FALSE, warning=FALSE, echo=FALSE, fig.height=6, fig.width=9.2, fig.cap="Forecast Comparison for ETS, TBATS approaches"}
 # ARIMA+ETS and ARIMA+TBATS ----
 c_3 <- autoplot(tse[,2]) +
   autolayer(fcs.adv.3, series = "ARIMA with regression", PI = F) +
@@ -617,7 +619,7 @@ c_3 <- autoplot(tse[,2]) +
   scale_y_continuous(name = "consumption Exp. (in mn AUD)",
                      limits = c(0,400000),
                      breaks = seq(0, 400000, by = 75000))+
-  scale_color_discrete(name = "Forecasting Models")+ 
+  scale_color_discrete(name = "Models:")+ 
   theme(legend.position="bottom")
 
 c_4 <- autoplot(tse[,2]) +
@@ -633,7 +635,7 @@ c_4 <- autoplot(tse[,2]) +
   scale_y_continuous(name = "consumption Exp. (in mn AUD)",
                      limits = c(0,400000),
                      breaks = seq(0, 400000, by = 75000))+
-  scale_color_discrete(name = "Forecasting Models")+ 
+  scale_color_discrete(name = "Models:")+ 
   theme(legend.position="bottom")
 
 ggarrange(c_3, c_4, nrow = 2) # fig 19
@@ -657,7 +659,8 @@ ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
   labs(caption = "DR - Dynamic Regression (in our case: ARIMA(2,1,2)(1,1,1) with xreg") # fig 20
 ```
 
-From _Figure 20_, we can see the overall comparison of all the models (combined and sole) performance based on the RMSE. Noticeably, the combination of two different best performing sole models (ARIMA with regression and ETS), provides us with the best results. In particularly this case, the poor performance of the automated modelling frameworks is visible with TBATS and autoARIMA having the biggest RMSE. In all the cases of forecasts combination, the advantage of the application of the optimal weights over averaging can be mentioned. 
+From _Figure 20_, we can see the overall comparison of all the models (combined and sole) performance based on the RMSE. Noticeably, the combination of two different best performing sole models (ARIMA with regression and ETS), provides us with the best results. In particularly this case, the poor performance of the automated modelling frameworks is visible with TBATS and autoARIMA having the biggest RMSE. In all the cases of forecasts combination, the advantage of the application of the optimal weights over averaging can be mentioned.
+
 \newpage
 
 ## Appendix
