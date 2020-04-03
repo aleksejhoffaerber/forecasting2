@@ -447,10 +447,11 @@ ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2, common.legend = T, legend = "b
 
 ## Forecast Combination: Comparison, Plotting and Measurment
 In the following part, we will combine different forecasting models and assess its performance. Specifically, we will test 3 different cases in forecasting combination:
+
 1. ARIMA model combined with the dynamic regression(DR).
 In this scenario, we will combine our best performing ARIMA model (in our case, it is `ARIMA(2,1,2)(1,1,1)[4]`) and same ARIMA model with the specified `xreg` parameter.
 
-2.AutoARIMA with regression model and manually picked ARIMA with regression.
+2. AutoARIMA with regression model and manually picked ARIMA with regression.
 Previously, the automated model has been compared with the manually adjusted one, and we have seen the advantage of the manual approach. Yet, it is interesting to see the performance of the combined model and to compare it to other variations of the forecast combination.
 
 3. Manual ARIMA with regression and TBATS/ETS
