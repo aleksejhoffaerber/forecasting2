@@ -86,18 +86,22 @@ As subject of study serves the Australian consumption and income data. Having a 
 # Analysis of the disposable income ----
 full.plot <- autoplot(tse[,1], color = "black", series = "income") +
   autolayer(tse[,2], color = "darkblue", series = "consumption") +
-  ggtitle("Net National Disposable income and Final consumption Expenditure", 
+  ggtitle("Net National Disposable income and Final Consumption Expenditure", 
           subtitle = "Two time series show a high degree of correlation") +
   scale_x_continuous(name = "Years",
                      limits = c(1960, 2020),
                      breaks = seq(1960, 2020, by = 10)) +
   scale_y_continuous(name = "income in AUD mn.",
                      limits = c(0, 500000),
-                     breaks = seq(0, 500000, by = 125000))
+                     breaks = seq(0, 500000, by = 125000)) +
+  scale_color_manual(name = "Time Series",
+                     values = c("black" = "black", "darkblue" = "darkblue"),
+                     labels = c("Income", "Consmuption")) +
+  theme(legend.position = "right")
 
 zoom.plot <- autoplot(tse[,1], color = "black", series = "income") +
   autolayer(tse[,2], color = "darkblue", series = "consumption") +
-  ggtitle("Net National Disposable income and Final consumption Expenditure", 
+  ggtitle("Net National Disposable income and Final Consumption Expenditure", 
           subtitle = "High degree of correlation even clearer for trend and cycles after zoom-in") +
   scale_x_continuous(name = "Years",
                      limits = c(1990, 2020),
