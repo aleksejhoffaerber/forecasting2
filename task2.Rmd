@@ -86,18 +86,22 @@ As subject of study serves the Australian consumption and income data. Having a 
 # Analysis of the disposable income ----
 full.plot <- autoplot(tse[,1], color = "black", series = "income") +
   autolayer(tse[,2], color = "darkblue", series = "consumption") +
-  ggtitle("Net National Disposable income and Final consumption Expenditure", 
+  ggtitle("Net National Disposable income and Final Consumption Expenditure", 
           subtitle = "Two time series show a high degree of correlation") +
   scale_x_continuous(name = "Years",
                      limits = c(1960, 2020),
                      breaks = seq(1960, 2020, by = 10)) +
   scale_y_continuous(name = "income in AUD mn.",
                      limits = c(0, 500000),
-                     breaks = seq(0, 500000, by = 125000))
+                     breaks = seq(0, 500000, by = 125000)) +
+  scale_color_manual(name = "Time Series",
+                     values = c("black" = "black", "darkblue" = "darkblue"),
+                     labels = c("Income", "Consmuption")) +
+  theme(legend.position = "right")
 
 zoom.plot <- autoplot(tse[,1], color = "black", series = "income") +
   autolayer(tse[,2], color = "darkblue", series = "consumption") +
-  ggtitle("Net National Disposable income and Final consumption Expenditure", 
+  ggtitle("Net National Disposable income and Final Consumption Expenditure", 
           subtitle = "High degree of correlation even clearer for trend and cycles after zoom-in") +
   scale_x_continuous(name = "Years",
                      limits = c(1990, 2020),
@@ -447,10 +451,11 @@ ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2, common.legend = T, legend = "b
 
 ## Forecast Combination: Comparison, Plotting and Measurment
 In the following part, we will combine different forecasting models and assess its performance. Specifically, we will test 3 different cases in forecasting combination:
+
 1. ARIMA model combined with the dynamic regression(DR).
 In this scenario, we will combine our best performing ARIMA model (in our case, it is `ARIMA(2,1,2)(1,1,1)[4]`) and same ARIMA model with the specified `xreg` parameter.
 
-2.AutoARIMA with regression model and manually picked ARIMA with regression.
+2. AutoARIMA with regression model and manually picked ARIMA with regression.
 Previously, the automated model has been compared with the manually adjusted one, and we have seen the advantage of the manual approach. Yet, it is interesting to see the performance of the combined model and to compare it to other variations of the forecast combination.
 
 3. Manual ARIMA with regression and TBATS/ETS
