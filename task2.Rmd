@@ -84,8 +84,8 @@ As subject of study serves the Australian consumption and income data. Having a 
 
 ```{r Figure 1 Disposable income Analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "Correlation and Trend of Australian Consumption and Income Data"}
 # Analysis of the disposable income ----
-full.plot <- autoplot(tse[,1], color = "black", series = "income") +
-  autolayer(tse[,2], color = "darkblue", series = "consumption") +
+full.plot <- autoplot(tse[,1], series = "Income") +
+  autolayer(tse[,2], series = "Consumption") +
   ggtitle("Net National Disposable income and Final Consumption Expenditure", 
           subtitle = "Two time series show a high degree of correlation") +
   scale_x_continuous(name = "Years",
@@ -94,13 +94,10 @@ full.plot <- autoplot(tse[,1], color = "black", series = "income") +
   scale_y_continuous(name = "income in AUD mn.",
                      limits = c(0, 500000),
                      breaks = seq(0, 500000, by = 125000)) +
-  scale_color_manual(name = "Time Series",
-                     values = c("black" = "black", "darkblue" = "darkblue"),
-                     labels = c("Income", "Consmuption")) +
   theme(legend.position = "right")
 
-zoom.plot <- autoplot(tse[,1], color = "black", series = "income") +
-  autolayer(tse[,2], color = "darkblue", series = "consumption") +
+zoom.plot <- autoplot(tse[,1], series = "Income") +
+  autolayer(tse[,2], series = "Consumption") +
   ggtitle("Net National Disposable income and Final Consumption Expenditure", 
           subtitle = "High degree of correlation even clearer for trend and cycles after zoom-in") +
   scale_x_continuous(name = "Years",
