@@ -91,7 +91,7 @@ full.plot <- autoplot(tse[,1], series = "Income") +
   scale_x_continuous(name = "Years",
                      limits = c(1960, 2020),
                      breaks = seq(1960, 2020, by = 10)) +
-  scale_y_continuous(name = "income in AUD mn.",
+  scale_y_continuous(name = "AUD mn.",
                      limits = c(0, 500000),
                      breaks = seq(0, 500000, by = 125000)) +
   theme(legend.position = "right")
@@ -103,7 +103,7 @@ zoom.plot <- autoplot(tse[,1], series = "Income") +
   scale_x_continuous(name = "Years",
                      limits = c(1990, 2020),
                      breaks = seq(1990, 2020, by = 10)) +
-  scale_y_continuous(name = "consumption AUD mn.",
+  scale_y_continuous(name = "AUD mn.",
                      breaks = seq(0, 500000, by = 125000))
 
 ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
@@ -389,7 +389,7 @@ This reestimation yields in a suitable model, considering the white noise type o
 ### Automated ARIMA Model Selection
 On the other side, the automated approach yields in a different model variation, that was already discussed above but discarded because of its negative impact on ACF and PACF plots and white-noise properties. It yields a lower AICc and does not yield in autocorrelation reduction, as seen in _Figure 15_. In sum, the automated dynamic regression model is a worse forecast model than our ARIMA(2,1,2)(1,1,1) model, as can be seen in _Figure 16_.
 
-```{r Figure 15 errors comparison, echo=FALSE, fig.cap="Residual Analysis for Automated Selected ARIMA model", fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
+```{r Figure 15 errors comparison, echo=FALSE, fig.cap="Residual Analysis for Automated Selected ARIMA Model", fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
 fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.lambda(ts.train[,2]))
 checkresiduals(fit.arima.adv) # fig 15
 ```
@@ -422,7 +422,7 @@ knitr::kable(arima.comp.2,
              caption = "Evaluation of ARIMA models with regression")
 ```
 
-```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap = "Forecast Performance Comparison between Manual and Automated Approach"}
+```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap = "Forecast Performance Comparison Between Manual and Automated Approach"}
 # Forecasting Comparison
 fcs.adv.3 <- forecast(fit.arima.adv.3, xreg = ts.test[,3])
 fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
@@ -559,7 +559,7 @@ knitr::kable(all_comp,
 
 As for the first combination case, where the ARIMA model is combined with the same model with regression, we can observe that the RMSE for the sole models is comparably close. So, in fact, there is no direct need to combine the forecasts, as the performance of the combined models and sole models will differ just slightly. 
 
-```{r ARIMA and DR plot, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Forecast Combination for Dynamic Regressions using ARIMA"}
+```{r ARIMA and DR plot, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Forecast Combination for Dynamic Regressions Using ARIMA"}
 # ARIMA + Dynamic ARIMA ----
 c_1 <- autoplot(tse[,2]) +
   autolayer(comb_dr, series = "Averaged forecast")+
@@ -688,7 +688,7 @@ checkresiduals(diff(diff(log(tse[,1]),4),1)) # fig 22
 checkresiduals(diff(diff(log(tse[,2]),4),1)) # fig 23
 ```
 
-```{r Appendix 6 first ARIMA model, fig.height=2, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for First ARIMA(0,1,3)(0,1,2)"}
+```{r Appendix 6 first ARIMA model, fig.height=2, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for First ARIMA(0,1,3)(0,1,2) Model"}
 (fit.1 <- Arima(ts.train[,2], order = c(0,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.1 <- ggAcf(fit.1$residuals) + ylab("") + ggtitle("ACF for ARIMA(0,1,3)(0,1,2)")
 ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(0,1,3)(0,1,2)")
