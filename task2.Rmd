@@ -82,7 +82,7 @@ ts.test <- window (tse,
 ### Analysis of Trend, Seasons, and Spurious Regression Issues
 As subject of study serves the Australian consumption and income data. Having a look at the time series, we see a high amount of correlation between both series that needs to be analysed using the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) Test, the Augmented Dickey-Fuller (ADF) Test, and corrected using differencing and other transformations. It can be observed that the seasonality and trend components are similar for both series, as seen in _Figure 1_. The distance between consumption and income increases with the later years, meaning that people in Australia earn more than they spend (see _Figure 1_). Also, spurious regression issues can be discarded as a potential issue, as disposable available income is impacts the consumption of the population because consumption depends on earnings and debt available.
 
-```{r Figure 1 Disposable income Analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "Correlation and Trend of Australian consumption and income Data"}
+```{r Figure 1 Disposable income Analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "Correlation and Trend of Australian Consumption and Income Data"}
 # Analysis of the disposable income ----
 full.plot <- autoplot(tse[,1], color = "black", series = "income") +
   autolayer(tse[,2], color = "darkblue", series = "consumption") +
@@ -122,11 +122,11 @@ summary(ur.df(tse[,1], type = "drift", lag = 4))
 ## Autocorrelation and Residual Analysis
 Checking the residuals indicates that lots of autocorrelation remains in the residuals. In other words: valuable information that is currently not used to predict the data. This autocorrelation pattern is also typical for this type of economic data and time series. The significance of autocorrelation issue is very high, with the p-value being zero, as indicated by the Ljung-Box test in the _Appendix_. Additionally, strong trend cycles and seasonality, visible in the ACF and residual plots indicate that both series are non-stationary. Based on the distribution of the residuals we also see, that stabilisation of variance and mean are particularly important in order to design a suitable forecasting model based on the AR(I)MA process.
 
-```{r Figure 2 residuals analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Residual Analysis of Disposable income"}
+```{r Figure 2 residuals analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Residual Analysis of Disposable Income"}
 checkresiduals(tse[,1]) # Figure 2
 ```
 
-### Disposable income Analysis
+### Disposable Income Analysis
 To deal with the economic characteristic we apply a Box-Cox transformation to the data. But, this is not enough, as after the transformation not only the autocorrelation and heteroscedasticity issues remain, but also because the distibution of the residuals does not have a fitting Gauss distribution, as can be seen in _Figure 2_. To fix this, we apply differencing methods to stabilize the mean and maintain the interpretability of the model and its results. As we saw with the previous KPSS test result that rejected the null hypothesis for all p-levels from 10 to 1 percent, we need to apply a differencing method.
 
 To calculate a fitting number of differences we must scrutinise the ACF plots: Based on the previous analyses, we know that seasons and trends play a role. A way to account for both issues and to keep the interpretability of the results is to apply first-order and seasonal differencing. In this way, we account for quarterly and seasonal (so yearly) difference in the series and can interpret the results as _quarterly changes_ in the respective variables.
@@ -176,7 +176,7 @@ ts.test <- window(tse,
                   frequency = 4)
 ```
 
-##  Long-term Relationship Analysis
+##  Long-Term Relationship Analysis
 As already indicated above, just regressing both variables on each other might lead to spurious regressions, identifiable by a high Adj. R-sqaured and high residual autocorrelation (Hyndman & Athanasopoulos, 2018). This occurence impacts the reliance of our forecast in the long-term horizon. Based on the previously conducted KPSS test, we already know that non-stationarity and possible cointegration of our series are an issue. These unit root tests already indicated that in order to guarantuee that the characteristic equation lies within the unit circle (Hyndman & Athanasopoulos, 2018), we must take the differences in order to assure stationarity. 
 
 As we see, from the analyses, incorporating our transformed series for consumption into the regression does resolve our stationarity issues in the regression setting. This indicates, that both variables have a significant, cointegrated long-term relationship, which can be used to design our forecasts. This also holds true if we apply the alternative values for `tau2`, being -3.43, -2.86, and -2.57 respectively.
@@ -193,11 +193,11 @@ summary(fit.tse.adj)
 summary(ur.df(residuals(fit.tse.adj), type = "drift", lag = 1))
 ```
 
-## Identify ARIMA model for consumption expenditure
-### Manual ARIMA Selection approach
+## Identify ARIMA Model for Consumption Expenditure
+### Manual ARIMA Selection Approach
 Firstly, based on the previously determined time series characteristics, we know that we must employ a first-order lag differences for our autoregression (AR) part and a first-order seasonal component for our quarterly data, meaining that `d` and `D` are equal to one in order to reflect the observations and KPSS test from before. 
 
-```{r Figure 3 log-diff, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap= "Residual Analysis for log-transformed and differenced consumption data"}
+```{r Figure 3 log-diff, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap= "Residual Analysis for Log-Transformed and Differenced Consumption Data"}
 log(ts.train[,2]) %>% 
   diff(lag = 4) %>% 
   diff() %>% 
@@ -211,7 +211,7 @@ fit.1 <- Arima(ts.train[,2], order = c(0,1,3), seasonal = c(0,1,2), lambda = Box
 fit.2 <- Arima(ts.train[,2], order = c(1,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2]))
 ```
 
-```{r Figure 4 ARIMA (2,1,3)(0,1,2), echo=FALSE, message=FALSE, warning=FALSE, results = FALSE, fig.height=2, fig.width=8, fig.cap = "ACF and PACF Analysis for ARIMA (2,1,3)(0,1,2) model"}
+```{r Figure 4 ARIMA (2,1,3)(0,1,2), echo=FALSE, message=FALSE, warning=FALSE, results = FALSE, fig.height=2, fig.width=8, fig.cap = "ACF and PACF Analysis for ARIMA (2,1,3)(0,1,2) Model"}
 (fit.3 <- Arima(ts.train[,2], order = c(2,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,3)(0,1,2)")
 ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,3)(0,1,2)")
@@ -219,7 +219,7 @@ ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Figure 4
 
 ```
 
-```{r Figure 5 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for ARIMA (2,1,3)(0,1,2) model"}
+```{r Figure 5 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for ARIMA (2,1,3)(0,1,2) Model"}
 checkresiduals(fit.3) # Figure 5
 ```
 
@@ -273,7 +273,7 @@ knitr::kable(arima.comp.1,
              caption = "Evaluation of ARIMA models without Regression Component")
 ```
 
-### Automated ARIMA selection approach
+### Automated ARIMA Selection Approach
 Because KPSS can only be used to determine `d` and `D`, we need to employ Information Criteria, such as AICc, to pick the correct `p`,`q`,`P`,`Q` values. This is already incorporated in the automated ARIMA model selection that calculates different ARIMA models and picks the best models based on those Informaiton Criteria. In fact, the same ARIMA(2,1,2)(1,1,1) is picked, based on the unit root space optimization to guarantee stationarity. 
 
 ```{r AutoARIMA, message=FALSE, warning=FALSE, include=FALSE, results = FALSE}
@@ -285,7 +285,7 @@ summary(fit.arima) # no print
 ## Comparison of ACF and PACF with ARIMA and Raw Consumption Expenditure
 Comparing the ACF and PACF plots of the raw Final consumption Expenditure and ARIMA data, we can observe the following: 1) The autocorrelation in the residuals is resolved. This was important to resolve, as ARIMA assumes that historical patterns will not change during the forecast. 2) The issue of a high PACF spike at lag 1, indicating correlation between the error terms of consumption between different lags was resolved. This is important to resolve, because ARIMA assumes uncorrelated future errors.
 
-```{r Figure 9 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "ACF and PACF comparisong between original data and ARIMA results"}
+```{r Figure 9 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "ACF and PACF Comparison between Original Data and ARIMA TRANSFORMED Results"}
 ce.acf <- ggAcf(ts.train[,2]) + ylab("") + ggtitle("ACF for consumption Exp.")
 ce.pacf <- ggPacf(ts.train[,2]) + ylab("") + ggtitle("PACF for consumption Exp.")
 ggarrange(ce.acf, ce.pacf,
@@ -296,7 +296,7 @@ ggarrange(ce.acf, ce.pacf,
 ## ARIMA Forecast on Test Data Set
 As can bee seen in _Figure 10_, the manual ARIMA model fits the data quite well, despite some minor overestimation. The prediction interval increases in size throughout time because of the included differences method.
 
-```{r ARIMA forecast, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "Predicted Australian consumption Expenditure based on ARIMA(2,1,2)(1,1,1) model"}
+```{r ARIMA forecast, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "Predicted Australian Consumption Expenditure Based on ARIMA(2,1,2)(1,1,1) Model"}
 f10 <- autoplot(forecast(fit.5, h =40), series = "Forecast") +
   autolayer(ts.test[,2], series = "Actual") +
   ggtitle("Consumption Exp. Prediction, based on ARIMA without dynamic component",
@@ -329,7 +329,7 @@ ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) +
 
 ```
 
-```{r Comparison of ARIMA DR, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap= "ACF and PACF Analysis Comparison for  ARIMA(0,1,0)(0,1,0) and ARIMA(0,1,0)(1,1,1)"}
+```{r Comparison of ARIMA DR, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap= "ACF and PACF Analysis Comparison for ARIMA(0,1,0)(0,1,0) and ARIMA(0,1,0)(1,1,1)"}
 # Comparison of the ARIMA models ----
 fit.arima.adv.2 <- Arima(ts.train[,2], 
                           order = c(0,1,0), 
@@ -605,7 +605,7 @@ From the _Figure 18_, presented above, we can observe the similar pattern as in 
 
 In the previous cases, we have looked into the combination of the different variations of the ARIMA models that we have estimated in the for the previous tasks. All of them share similar characteristics being above the test set in terms of forecast and primarily varying in the "closeness" to the actual data and capturing of the seasonality (especially visible in the last case). However, it is interesting to see the difference between the ARIMA models and other estimation approaches. For this case, we have made forecasting using TBATS and ETS models both separately combining with the best performing ARIMA model with regression.
 
-```{r fig.height=6, message=FALSE, warning=FALSE, echo=FALSE, fig.height=6, fig.width=9.2, fig.cap="Forecast Comparison for ETS, TBATS approaches"}
+```{r fig.height=6, message=FALSE, warning=FALSE, echo=FALSE, fig.height=6, fig.width=9.2, fig.cap="Forecast Comparison for ETS, TBATS Approaches"}
 # ARIMA+ETS and ARIMA+TBATS ----
 c_3 <- autoplot(tse[,2]) +
   autolayer(fcs.adv.3, series = "ARIMA with regression", PI = F) +
@@ -674,15 +674,15 @@ Box.test(tse[,1], lag = 10, type = "Ljung-Box") # Appendix
 Box.test(tse[,2], lag = 10, type = "Ljung-Box") # Appendix 
 ```
 
-```{r Appendix 3 residual analysis CE, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for income"}
+```{r Appendix 3 residual analysis CE, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for Income"}
 checkresiduals(tse[,2]) # fig 21
 ```
 
-```{r Appendix 4 second order diff-log analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for First-Order Seasonal Differencing with Box-Cox"}
+```{r Appendix 4 second order diff-log analysis, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for First-Order Seasonal Differencing with Box-Cox for Income"}
 checkresiduals(diff(diff(log(tse[,1]),4),1)) # fig 22
 ```
 
-```{r Appendix 5 second order diff-log CE, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for First-Order Seasonal Differencing for consumption"}
+```{r Appendix 5 second order diff-log CE, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap = "Residual Analysis for First-Order Seasonal Differencing for Consumption"}
 checkresiduals(diff(diff(log(tse[,2]),4),1)) # fig 23
 ```
 
@@ -693,32 +693,32 @@ ce.pacf.1 <- ggPacf(fit.1$residuals) + ylab("") + ggtitle("PACF for ARIMA(0,1,3)
 ggarrange(ce.acf.1, ce.pacf.1, ncol = 2) # fig 24
 ```
 
-```{r Appendix 7 residual analysis, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for First ARIMA(1,1,3)(0,1,2) model"}
+```{r Appendix 7 residual analysis, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for First ARIMA(1,1,3)(0,1,2) Model"}
 checkresiduals(fit.1)$p.value # fig 25
 ```
 
-```{r Appendix 8 second ARIMA model, fig.height=2, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "PACF & ACF Analysis for Second ARIMA(1,1,3)(0,1,2) model"}
+```{r Appendix 8 second ARIMA model, fig.height=2, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "PACF & ACF Analysis for Second ARIMA(1,1,3)(0,1,2) Model"}
 (fit.2 <- Arima(ts.train[,2], order = c(1,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
 ce.acf.2 <- ggAcf(fit.2$residuals) + ylab("") + ggtitle("ACF for ARIMA(1,1,3)(0,1,2)")
 ce.pacf.2 <- ggPacf(fit.2$residuals) + ylab("") + ggtitle("PACF for ARIMA(1,1,3)(0,1,2)")
 ggarrange(ce.acf.2, ce.pacf.2, ncol = 2) # fig 26
 ```
 
-```{r Appendix 9 residual analysis, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual  Analysis for Second ARIMA(1,1,3)(0,1,2) model"}
+```{r Appendix 9 residual analysis, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual  Analysis for Second ARIMA(1,1,3)(0,1,2) Model"}
 checkresiduals(fit.2) # fig 27
 ```
 
-```{r Appendix 10 ACF and PACF, fig.height=4, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "PACF & ACF  Analysis for Third ARIMA(2,1,3)(0,1,2) and Fourth ARIMA(2,1,2)(0,1,1) model"}
+```{r Appendix 10 ACF and PACF, fig.height=4, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "PACF & ACF  Analysis for Third ARIMA(2,1,3)(0,1,2) and Fourth ARIMA(2,1,2)(0,1,1) Model"}
 ggarrange(ce.acf.3, ce.pacf.3, 
           ce.acf.4, ce.pacf.4,
           ncol = 2, nrow = 2) # fig 28
 ```
 
-```{r Appendix 11 DR residual analysis, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for First DR + ARIMA(0,1,0)(0,1,0) model"}
+```{r Appendix 11 DR residual analysis, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for First DR + ARIMA(0,1,0)(0,1,0) Model"}
 checkresiduals(fit.arima.adv.1) # fig 29 
 ```
 
-```{r Appendix 12, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for Second DR + ARIMA(0,1,0)(1,1,1) model"}
+```{r Appendix 12, fig.height=3, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Residual Analysis for Second DR + ARIMA(0,1,0)(1,1,1) Model"}
 checkresiduals(fit.arima.adv.2) # fig 30
 ```
 
