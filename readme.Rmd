@@ -31,11 +31,21 @@ theme_set(theme_minimal())
 
 ## Goals and Procedure
 
-The aim of this short project was to investigate the behavior of statistical time-series models and their mathematical assumptions. Main subject of this study are ARIMA and SARIMA models that were used to understand the relationship between consumption and GDP in Australia.
+The aim of this short project was to investigate the behavior of statistical time-series models and their mathematical assumptions. Main subject of this study are ARIMA and SARIMA models that were used to understand the relationship between consumption and GDP in Australia. Additionally, forecast combinations were derived to identify further modelling variants.
 
 Furthermore, the performance of the models was compared to ETS, TBATS, Average. DR+ARIMA etc. The results indicated, that DR+ETS approaches performed best considering the given data.
 
-```{r preprocess, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+## Applied Methodologies (excerpt)
+
+1. Analysis of Trend, Seasons, and Spurious Regression Issues (KPSS, ADF)
+2. Stationarity Analysis 
+3. Autocorrelation and Residual Analysis
+4. Box-Cox Transformation
+
+```{r loading data, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+# 1. Loading data ----
+# Loading .csv file containing the important data points on "Net national disposable income" (di) and "Final consumption expenditure" (ce)
+# for all the countries available. Filtering out unnecessary columns, and changing data format to a wide format
 df <- read_csv("data.csv")
 
 df %<>% 
@@ -51,14 +61,516 @@ tse <- ts(df[,2:3], start = c(1959,3), end = c(2019,4), frequency = 4)
 
 # binding date information from ts object to original df (easier than transforming the original format to a R date format)
 df <- cbind(as.double(time(tse)), df) 
+
+df %<>% select(-Date) %>% 
+  rename(Date = "as.double(time(tse))")
+
+# 2. Split into test and train set (10 years of prediction, 39 quarters) ----
+ts.train <- window (tse,
+               start = c(1959,3),
+               end = c(2009,4),
+               frequency = 4)
+
+ts.test <- window (tse, 
+              start = c(2010,1),
+              frequency = 4)
 ```
 
-## Including Plots
+```{r Figure 1 Disposable income Analysis, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+# Analysis of the disposable income ----
+full.plot <- autoplot(tse[,1], series = "Income") +
+  autolayer(tse[,2], series = "Consumption") +
+  ggtitle("Net National Disposable income and Final Consumption Expenditure", 
+          subtitle = "Two time series show a high degree of correlation") +
+  scale_x_continuous(name = "Years",
+                     limits = c(1960, 2020),
+                     breaks = seq(1960, 2020, by = 10)) +
+  scale_y_continuous(name = "AUD mn.",
+                     limits = c(0, 500000),
+                     breaks = seq(0, 500000, by = 125000)) +
+  theme(legend.position = "right")
 
-You can also embed plots, for example:
+zoom.plot <- autoplot(tse[,1], series = "Income") +
+  autolayer(tse[,2], series = "Consumption") +
+  ggtitle("Net National Disposable income and Final Consumption Expenditure", 
+          subtitle = "High degree of correlation even clearer for trend and cycles after zoom-in") +
+  scale_x_continuous(name = "Years",
+                     limits = c(1990, 2020),
+                     breaks = seq(1990, 2020, by = 10)) +
+  scale_y_continuous(name = "AUD mn.",
+                     breaks = seq(0, 500000, by = 125000))
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+ggarrange(full.plot, zoom.plot, nrow = 2) # Figure 1
+
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r ADF with drift test, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+summary(ur.kpss(tse[,1],use.lag = 4)) 
+summary(ur.df(tse[,1], type = "drift", lag = 4))
+```
+
+```{r Figure 2 residuals analysis, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+checkresiduals(tse[,1]) # Figure 2
+```
+
+```{r Ljung-Box test and KPSS summary, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+Box.test(diff(diff(log(tse[,1]),4),1), lag = 10, type = "Ljung-Box")
+diff(diff(log(tse[,1]),4),1) %>% ur.kpss() %>% summary()
+```
+
+```{r DI ndiffs, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+tse[,1] %>% log() %>% nsdiffs() # seasonal differencing
+tse[,1] %>% log() %>% diff(lag = 4) %>% ndiffs() # first-order differencing
+```
+
+```{r CE KPSS, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+tse[,2] %>% ur.kpss() %>% summary()
+```
+
+```{r Log diff and seasonal, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+Box.test(diff(diff(log(tse[,2]),4),1), lag = 10, type = "Ljung-Box")
+diff(diff(log(tse[,2]),4),1) %>% ur.kpss() %>% summary()
+
+tse[,2] %>% log() %>% nsdiffs()
+tse[,2] %>% log() %>% diff(lag = 4) %>% ndiffs()
+
+df$di.adj <- c(c(rep(NA,4), diff(diff(tse[,1]),4),1))
+df$ce.adj <- c(c(rep(NA,4), diff(diff(tse[,2]),4),1))
+
+tse <- ts(df[,2:5], start = c(1959,3), end = c(2019,4), frequency = 4)
+
+# Split again into test and train set, with slightly adjusted start date to account for differencing reduction of the data ----
+ts.train <- window(tse,
+                   start = c(1960,4),
+                   end = c(2009,4),
+                   frequency = 4)
+
+ts.test <- window(tse, 
+                  start = c(2010,1),
+                  end = c(2019,4),
+                  frequency = 4)
+```
+
+```{r TSLM with original data, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, results=FALSE}
+fit.tse <- tslm(formula = ts.train[,1] ~ ts.train[,2]) # not white-noise adjusted
+summary(fit.tse)
+summary(ur.df(residuals(fit.tse), type = "none"))
+```
+
+```{r TSLM with transformed data, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+fit.tse.adj <- tslm(formula = ts.train[,"di.adj"] ~ ts.train[,"ce.adj"]) # white noise adjusted
+summary(fit.tse.adj)
+summary(ur.df(residuals(fit.tse.adj), type = "drift", lag = 1))
+```
+
+```{r Figure 3 log-diff, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+log(ts.train[,2]) %>% 
+  diff(lag = 4) %>% 
+  diff() %>% 
+  ggtsdisplay() # Figure 3
+```
+
+```{r Fit of the first models, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+fit.1 <- Arima(ts.train[,2], order = c(0,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2]))
+fit.2 <- Arima(ts.train[,2], order = c(1,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2]))
+```
+
+```{r Figure 4 ARIMA (2,1,3)(0,1,2), echo=FALSE, message=FALSE, warning=FALSE, results = FALSE, fig.show='hide'}
+(fit.3 <- Arima(ts.train[,2], order = c(2,1,3), seasonal = c(0,1,2), lambda = BoxCox.lambda(ts.train[,2])))
+ce.acf.3 <- ggAcf(fit.3$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,3)(0,1,2)")
+ce.pacf.3 <- ggPacf(fit.3$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,3)(0,1,2)")
+ggarrange(ce.acf.3, ce.pacf.3, ncol = 2) # Figure 4
+
+```
+
+```{r Figure 5 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+checkresiduals(fit.3) # Figure 5
+```
+
+
+```{r Modified fit 4, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+(fit.4 <- Arima(ts.train[,2], order = c(2,1,2), seasonal = c(0,1,1), lambda = BoxCox.lambda(ts.train[,2])))
+ce.acf.4 <- ggAcf(fit.4$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,2)(0,1,1)") + theme_minimal()
+ce.pacf.4 <- ggPacf(fit.4$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)(0,1,1)") + theme_minimal()
+```
+
+```{r Figure 6 model, ACF and PACF, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+(fit.5 <- Arima(ts.train[,2], order = c(2,1,2), seasonal = c(1,1,1), lambda = BoxCox.lambda(ts.train[,2])))
+ce.acf.5 <- ggAcf(fit.5$residuals) + ylab("") + ggtitle("ACF for ARIMA(2,1,2)(1,1,1)") + theme_minimal()
+ce.pacf.5 <- ggPacf(fit.5$residuals) + ylab("") + ggtitle("PACF for ARIMA(2,1,2)(1,1,1)") + theme_minimal()
+ggarrange(ce.acf.4, ce.pacf.4,
+          ce.acf.5, ce.pacf.5, ncol = 2, nrow = 2) # Figure 6
+```
+
+```{r Figure 7 residual analysis, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+checkresiduals(fit.5) # Figure 8
+```
+
+```{r Figure 8 characterisitc roots, echo=FALSE, message=FALSE, results=FALSE, warning=FALSE}
+autoplot(fit.5) # Figure 8 # no cap
+```
+
+```{r ARIMA model comparison, message=FALSE, warning=FALSE, include=FALSE, results=FALSE}
+arima.comp.1 <- data.frame(model=c("ARIMA(1,1,1)(0,1,2)", 
+                                    "ARIMA(1,1,3)(0,1,2)", 
+                                    "ARIMA(2,1,3)(0,1,2)", 
+                                    "ARIMA(2,1,2)(0,1,1)", 
+                                    "ARIMA(2,1,2)(1,1,1)"),
+                            LB.p.value = c(checkresiduals(fit.1)$p.value, checkresiduals(fit.2)$p.value,
+                                           checkresiduals(fit.3)$p.value, checkresiduals(fit.4)$p.value,
+                                           checkresiduals(fit.5)$p.value),
+                           aicc = c(fit.1$aicc, fit.2$aicc, fit.3$aicc, fit.4$aicc, fit.5$aicc),
+                           bic = c(fit.1$bic, fit.2$bic, fit.3$bic, fit.4$bic, fit.5$bic)) %>% 
+  mutate_if(is.numeric, round, digit = 3) %>% 
+  arrange(desc(LB.p.value), aicc) # ordering by p.value and AICc
+# arima.comp.1
+```
+
+```{r FIgure 2 ARIMA model comparison data frame, echo=FALSE, message=FALSE, warning=FALSE, results = FALSE}
+knitr::kable(arima.comp.1,
+             booktabs = T,
+             caption = "Evaluation of ARIMA models without Regression Component")
+```
+
+```{r AutoARIMA, message=FALSE, warning=FALSE, include=FALSE, results = FALSE}
+(fit.arima <- auto.arima(ts.train[,2], lambda = BoxCox.lambda(ts.train[,2])))
+summary(fit.arima) # no print
+
+```
+
+
+```{r Figure 2 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap = "ACF and PACF Comparison between Original Data and ARIMA Transformed Results"}
+ce.acf <- ggAcf(ts.train[,2]) + ylab("") + ggtitle("ACF for consumption Exp.")
+ce.pacf <- ggPacf(ts.train[,2]) + ylab("") + ggtitle("PACF for consumption Exp.")
+ggarrange(ce.acf, ce.pacf,
+          ce.acf.5, ce.pacf.5, 
+          ncol = 2, nrow = 2) # Figure 9
+```
+
+
+```{r ARIMA forecast, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+f10 <- autoplot(forecast(fit.5, h =40), series = "Forecast") +
+  autolayer(ts.test[,2], series = "Actual") +
+  ggtitle("Consumption Exp. Prediction, based on ARIMA without dynamic component",
+          subtitle = "Forecast fits actual data quite well, despite slight overestimation") +
+  scale_x_continuous(name = "Years",
+                     limits = c(1990,2020))+
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,630000),
+                     breaks = seq(0, 625000, by = 125000)) # Fig. 10 
+f10
+```
+
+```{r First manual dynamic regression, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+fit.arima.adv.1 <- Arima(ts.train[,2], 
+                          order = c(0,1,0), 
+                          seasonal = c(0,1,0), 
+                          xreg = ts.train[,3], 
+                          lambda = BoxCox.lambda(ts.train[,2]))
+
+ce.acf.adv.1 <- ggAcf(fit.arima.adv.1$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for DR + ARIMA(0,1,0)(0,1,0)")
+ce.pacf.adv.1 <- ggPacf(fit.arima.adv.1$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for DR + ARIMA(0,1,0)(0,1,0)")
+
+```
+
+```{r Comparison of ARIMA DR, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+# Comparison of the ARIMA models ----
+fit.arima.adv.2 <- Arima(ts.train[,2], 
+                          order = c(0,1,0), 
+                          seasonal = c(1,1,1), 
+                          xreg = ts.train[,3], 
+                          lambda = BoxCox.lambda(ts.train[,2]))
+
+
+ce.acf.adv.2 <- ggAcf(fit.arima.adv.2$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for DR + ARIMA(0,1,0)(1,1,1)")
+ce.pacf.adv.2 <- ggPacf(fit.arima.adv.2$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for DR + ARIMA(0,1,0)(1,1,1)") 
+
+ggarrange(ce.acf.adv.1,ce.pacf.adv.1,
+          ce.acf.adv.2, ce.pacf.adv.2, 
+          ncol = 2, nrow = 2) # fig 11
+```
+
+```{r Figure 12 ACF and PACF comparison, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+(fit.arima.adv.3 <- Arima(ts.train[,2], 
+                          order = c(2,1,2), 
+                          seasonal = c(1,1,1), 
+                          xreg = ts.train[,3], 
+                          lambda = BoxCox.lambda(ts.train[,2])))
+
+ce.acf.adv.3 <- ggAcf(fit.arima.adv.3$residuals) + 
+  ylab("") + 
+  ggtitle("ACF for DR + ARIMA(2,1,2)(1,1,1)")
+
+ce.pacf.adv.3 <- ggPacf(fit.arima.adv.3$residuals) + 
+  ylab("") + 
+  ggtitle("PACF for DR + ARIMA(2,1,2)(1,1,1)")
+
+ggarrange(ce.acf.adv.3,ce.pacf.adv.3, ncol = 2) # fig 12
+```
+
+```{r Figure 13 residual analysis DR, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+checkresiduals(fit.arima.adv.3) # fig 13
+```
+
+```{r Figure 14 errors comparison, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+cbind("Reg Err." = residuals(fit.arima.adv.3, type = "regression"),
+      "ARIMA Err." = residuals(fit.arima.adv.3, type = "innovation")) %>% 
+  autoplot(facets = T) +
+  ggtitle("Comparison of DR + ARIMA(2,1,2)(1,1,1) Errors",
+          subtitle = "Regression Errors capute the overall time series trend, ARIMA errors resemlbe a white noise series")
+# fig 14 #no cap
+```
+
+```{r Figure 15 errors comparison, echo=FALSE, results=FALSE, fig.show='hide'}
+fit.arima.adv <- auto.arima(ts.train[,2], xreg = ts.train[,3], lambda = BoxCox.lambda(ts.train[,2]))
+checkresiduals(fit.arima.adv) # fig 15
+```
+
+```{r DR model comparison, message=FALSE, warning=FALSE, include=FALSE, results=FALSE}
+arima.comp.2 <- data.frame(model=c("ARIMA(0,1,0)(0,1,0)", 
+                                   "ARIMA(0,1,0)(1,1,1)", 
+                                   "ARIMA(2,1,2)(1,1,1)", 
+                                   "ARIMA(1,1,1)(0,0,2)"),
+                           LB.p.value = c(checkresiduals(fit.arima.adv.1)$p.value, 
+                                          checkresiduals(fit.arima.adv.2)$p.value,
+                                          checkresiduals(fit.arima.adv.3)$p.value, 
+                                          checkresiduals(fit.arima.adv)$p.value),
+                           aicc = c(fit.arima.adv.1$aicc, 
+                                    fit.arima.adv.2$aicc, 
+                                    fit.arima.adv.3$aicc, 
+                                    fit.arima.adv$aicc),
+                           bic = c(fit.arima.adv.1$bic, 
+                                   fit.arima.adv.2$bic, 
+                                   fit.arima.adv.3$bic, 
+                                   fit.arima.adv$bic)) %>%
+  mutate_if(is.numeric, round, digit = 3) %>% 
+  arrange(desc(LB.p.value), aicc) # ordering by p.value and AICc
+
+```
+
+```{r DR plot comparison, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+knitr::kable(arima.comp.2,
+             booktabs = T,
+             caption = "Evaluation of ARIMA models with regression")
+```
+
+```{r Figure 17 forecasts comparison, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+# Forecasting Comparison
+fcs.adv.3 <- forecast(fit.arima.adv.3, xreg = ts.test[,3])
+fcs.adv <- forecast(fit.arima.adv, xreg = ts.test[,3])
+
+fcs.adv.3.plot <- autoplot(fcs.adv.3, series = "Fitted consumption") +
+  autolayer(ts.test[,2], series = "Actual consumption") +
+  scale_x_continuous(name = "Years",
+                     limits = c(1990,2020))+
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,630000),
+                     breaks = seq(0, 625000, by = 125000))
+
+fcs.adv.plot <- autoplot(fcs.adv, series = "Fitted consumption") +
+  autolayer(ts.test[,2], series = "Actual consumption") +
+  scale_x_continuous(name = "Years",
+                     limits = c(1990,2020))+
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,625000),
+                     breaks = seq(0, 625000, by = 125000))
+
+ggarrange(fcs.adv.3.plot, fcs.adv.plot, nrow = 2, common.legend = T, legend = "bottom") # fig 17
+```
+
+```{r Forecast combination, message=FALSE, warning=FALSE, include=FALSE, results=FALSE, fig.show='hide'}
+# Dynamic and ARIMA ----
+# Averaging: dynamic regression and ARIMA
+fcs.5 <- forecast(fit.5, h = 40)
+comb_dr <- (fcs.5[["mean"]]+fcs.adv.3[["mean"]])/2
+
+accuracy(fcs.5, x = ts.test[,2])
+accuracy(fcs.adv.3, x = ts.test[,2])
+accuracy(comb_dr, x = ts.test[,2])
+
+# Optimal weights: dynamic regression and ARIMA
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+fcs.5[["mean"]]))/(var(fcs.5[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+fcs.5[["mean"]]))
+rw <- 1-w
+
+comb_dr_w <- w*fcs.5[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_dr_w, x = ts.test[,2])
+
+# ARIMA and autoARIMA comparison ----
+# Averaging: Auto and Manual
+comb_am <- (fcs.adv[["mean"]]+fcs.adv.3[["mean"]])/2
+
+accuracy(fcs.adv, x = ts.test[,2])
+accuracy(fcs.adv.3, x = ts.test[,2])
+accuracy(comb_am, x = ts.test[,2])
+
+# Optimal weights: Auto and Manual
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+fcs.adv[["mean"]]))/(var(fcs.adv[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+fcs.adv[["mean"]]))
+rw <- 1-w
+
+comb_am_w <- w*fcs.adv[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_am_w, x = ts.test[,2])
+
+# With ETS and TBATS ----
+# Averaging: ETS, TBATS
+ETS <- forecast(ets(ts.train[,2]), h = 40)
+TBATS <- forecast(tbats(ts.train[,2], biasadj = T), h = 40)
+comb_tbats <- (fcs.adv.3[["mean"]]+TBATS[["mean"]])/2
+comb_ets <- (fcs.adv.3[["mean"]]+ETS[["mean"]])/2
+
+accuracy(comb_ets, x = ts.test[,2])
+accuracy(comb_tbats, x = ts.test[,2])
+
+# Optimal weights: ETS, TBATS
+# For TBATS
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+TBATS[["mean"]]))/(var(TBATS[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+TBATS[["mean"]]))
+rw <- 1-w
+
+comb_tbats_w <- w*TBATS[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_tbats_w, x = ts.test[,2])
+
+# For ETS
+w <- (var(fcs.adv.3[["mean"]]) - sd(fcs.adv.3[["mean"]]+ETS[["mean"]]))/(var(ETS[["mean"]])+var(fcs.adv.3[["mean"]])-2*sd(fcs.adv.3[["mean"]]+ETS[["mean"]]))
+rw <- 1-w
+
+comb_ets_w <- w*ETS[["mean"]]+rw*fcs.adv.3[["mean"]]
+accuracy(comb_ets_w, x = ts.test[,2])
+```
+
+
+
+```{r Table with comparisons, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE, fig.show='hide'}
+all_comp <- as.data.frame(matrix(data = c(accuracy(fcs.5, x = ts.test[,2])["Test set", c("ME", "RMSE", "MAE")],
+                            accuracy(fcs.adv, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(fcs.adv.3, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(ETS, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(TBATS, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_dr, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_dr_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_am, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_am_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_ets, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_ets_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_tbats, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")],
+                            accuracy(comb_tbats_w, x = ts.test[,2])["Test set",c("ME", "RMSE", "MAE")]),
+                   nrow = 13,
+                   ncol = 3,
+                   byrow = T,
+                   dimnames = list(c("ARIMA(2,1,2)(1,1,1)", 
+                                     "ARIMA(1,1,1)(0,0,2) with reg",
+                                     "ARIMA(2,1,2)(1,1,1) with reg",
+                                     "ETS", 
+                                     "TBATS",
+                                     "Averaged ARIMA+DR",
+                                     "Optimal weights: ARIMA+DR",
+                                     "Averaged: DRs(auto+manual)",
+                                     "Optimal: DRs(auto+manual)",
+                                     "Averaged: DR + ETS",
+                                     "Optimal weights: DR + ETS",
+                                     "Averaged: DR + TBATS",
+                                     "Optimal weights: DR + TBATS"), 
+                                   c("ME", "RMSE", "MAE"))))
+
+knitr::kable(all_comp,
+             booktabs = T,
+             caption = "Evaluation of forecasting of sole and combined models")
+```
+
+```{r ARIMA and DR plot, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Forecast Combination for Dynamic Regressions Using ARIMA"}
+# ARIMA + Dynamic ARIMA ----
+c_1 <- autoplot(tse[,2]) +
+  autolayer(comb_dr, series = "Averaged forecast")+
+  autolayer(fcs.5, series = "ARIMA(2,1,2)(1,1,1)", PI = F) +
+  autolayer(fcs.adv.3, series = "ARIMA(2,1,2)(1,1,1) with xreg", PI = F) +
+  autolayer(comb_dr_w, series = "Optimal weights combination")+
+  ggtitle("Forecasts combination: ARIMA and dynamic regression", 
+          subtitle = "Forecast are overlapping because of predominance of the DR + ARIMA(2,1,2)(1,1,1)") +
+  scale_x_continuous(name = "Year",
+                     limits = c(2000,2020),
+                     breaks = seq(2000, 2020, by = 5)) +
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,400000),
+                     breaks = seq(0, 400000, by = 75000))+
+  scale_color_discrete(name = "Forecasting Models")
+
+c_1 # fig 17
+```
+
+```{r Manual and autoARIMA plot, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=8, fig.cap="Forecast Combination for Dynamic Regressions and Automated Regression"}
+# ARIMA Manual + ARIMA Auto ----
+c_2 <- autoplot(tse[,2]) +
+  autolayer(comb_am, series = "Averaged forecast")+
+  autolayer(fcs.adv, series = "ARIMA(1,1,1)(0,0,2) with xreg", PI = F)+
+  autolayer(fcs.adv.3, series = "ARIMA(2,1,2)(1,1,1) with xreg", PI = F)+
+  autolayer(comb_am_w, series = "Optimal weights combination")+
+  ggtitle("Forecasts combination: autoARIMA and manual approach", 
+          subtitle = "Comparison of the sole models and forecast combinations") +
+  scale_x_continuous(name = "Year",
+                     limits = c(2000,2020),
+                     breaks = seq(2000, 2020, by = 5)) +
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,400000),
+                     breaks = seq(0, 400000, by = 75000))+
+  scale_color_discrete(name = "Forecasting Models")
+
+c_2 # fig 18
+```
+
+```{r fig.height=6, message=FALSE, warning=FALSE, echo=FALSE, fig.height=6, fig.width=9.2, fig.cap="Forecast Comparison for ETS, TBATS Approaches"}
+# ARIMA+ETS and ARIMA+TBATS ----
+c_3 <- autoplot(tse[,2]) +
+  autolayer(fcs.adv.3, series = "ARIMA with regression", PI = F) +
+  autolayer(ETS, series = "ETS", PI = F)+
+  autolayer(TBATS, series = "TBATS", PI = F)+
+  ggtitle("Performance of the models without combination", 
+          subtitle = "Comparison of ARIMA with regression, TBATS and ETS") +
+  scale_x_continuous(name = "Year",
+                     limits = c(2000,2020),
+                     breaks = seq(2000, 2020, by = 5)) +
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,400000),
+                     breaks = seq(0, 400000, by = 75000))+
+  scale_color_discrete(name = "Models:")+ 
+  theme(legend.position="bottom")
+
+c_4 <- autoplot(tse[,2]) +
+  autolayer(comb_tbats, series = "Averaged: TBATS+ARIMA")+
+  autolayer(comb_ets, series = "Averaged: ETS+ARIMA")+
+  autolayer(comb_ets_w, series = "Optimal weights: ETS+ARIMA") +
+  autolayer(comb_tbats_w, series = "Optimal weights: TBATS+ARIMA")+
+  ggtitle("Forecasts combination: TBATS and ETS with ARIMA", 
+          subtitle = "Combining ARIMA with regression with the other approaches") +
+  scale_x_continuous(name = "Year",
+                     limits = c(2000,2020),
+                     breaks = seq(2000, 2020, by = 5)) +
+  scale_y_continuous(name = "consumption Exp. (in mn AUD)",
+                     limits = c(0,400000),
+                     breaks = seq(0, 400000, by = 75000))+
+  scale_color_discrete(name = "Models:")+ 
+  theme(legend.position="bottom")
+
+ggarrange(c_3, c_4, nrow = 2) # fig 19
+```
+
+```{r Figure Measurements comparison, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8, fig.cap="Forecast Accuracy Comparison"}
+all_comp <- all_comp[order(all_comp$RMSE),]
+all_comp$Model <- factor(row.names(all_comp), levels = row.names(all_comp)) 
+
+ggplot(all_comp, aes(x=Model, y= RMSE, label=RMSE)) +
+  scale_x_discrete(limits = rev(levels(all_comp$Model)))+
+  geom_bar(stat='identity', aes(fill=row.names(all_comp)), width=.5)+
+  theme(legend.position = "none")+
+  labs(subtitle="ETS and combinations with ETS perform the best followed by sole MDR", 
+       title= "Comparison of forecasts accuracy, based on RMSE") + 
+  coord_flip()+
+  labs(caption = "DR - Dynamic Regression (in our case: ARIMA(2,1,2)(1,1,1) with xreg") # fig 20
+```
+
