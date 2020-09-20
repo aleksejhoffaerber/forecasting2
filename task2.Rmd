@@ -49,7 +49,7 @@ theme_set(theme_minimal())
 # for all the countries available. Filtering out unnecessary columns, and changing data format to a wide format
 df <- read_csv("data.csv")
 
-df %<>%
+df %>% 
   filter(LOCATION == "AUS") %>% 
   select(SUBJECT, TIME, Value) %>%
   tidyr::spread(SUBJECT, Value) %>% # only calling single function to reduce conflicts between tidyr and dplyr
@@ -76,7 +76,7 @@ ts.test <- window (tse,
               start = c(2010,1),
               frequency = 4)
 ```
-
+%>% 
 
 ## Time-series Analysis and Summaries
 ### Analysis of Trend, Seasons, and Spurious Regression Issues

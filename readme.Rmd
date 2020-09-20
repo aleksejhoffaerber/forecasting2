@@ -1,0 +1,64 @@
+---
+title: "Forecasting Project & Model Accuracy Comparison"
+author: "Aleksej Hoffärber, Egor Zmaznev"
+date: "3/4/2020"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+# Libraries and theme----
+library(fpp2)
+library(ggplot2)
+library(PerformanceAnalytics)
+library(corrplot)
+library(ggpubr)
+library(seasonal)
+library(splines)
+library(dplyr)
+library(magrittr)
+library(readr)
+library(skimr)
+library(urca)
+library(tsDyn)
+library(ForecastComb)
+
+theme_set(theme_minimal())
+
+```
+
+## Goals and Procedure
+
+The aim of this short project was to investigate the behavior of statistical time-series models and their mathematical assumptions. Main subject of this study are ARIMA and SARIMA models that were used to understand the relationship between consumption and GDP in Australia.
+
+Furthermore, the performance of the models was compared to ETS, TBATS, Average. DR+ARIMA etc. The results indicated, that DR+ETS approaches performed best considering the given data.
+
+```{r preprocess, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+df <- read_csv("data.csv")
+
+df %<>% 
+  filter(LOCATION == "AUS") %>% 
+  select(SUBJECT, TIME, Value) %>%
+  tidyr::spread(SUBJECT, Value) %>% # only calling single function to reduce conflicts between tidyr and dplyr
+  rename(Date = TIME,
+         di = B6NS1,
+         ce = P3S1)
+
+# creating time-series object
+tse <- ts(df[,2:3], start = c(1959,3), end = c(2019,4), frequency = 4)
+
+# binding date information from ts object to original df (easier than transforming the original format to a R date format)
+df <- cbind(as.double(time(tse)), df) 
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
